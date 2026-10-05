@@ -1,199 +1,111 @@
 # Agent Lab Roadmap
 
-## Milestone 0 — Project Foundation
+## Milestone 0 — Platform Foundation
 
-**Goal:** Create a clean repository and document the architecture.
+**Goal:** Establish clean repository foundation, system context, and environment verification.
 
 - [x] Create Agent Lab repository structure
-- [x] Add [SYSTEM_CONTEXT.md](file:///home/berrybytes/Office/agent/agent-lab/SYSTEM_CONTEXT.md)
-- [ ] Add `ARCHITECTURE.md`
-- [x] Add [ROADMAP.md](file:///home/berrybytes/Office/agent/agent-lab/ROADMAP.md)
-- [ ] Document existing AX + Agent Substrate environment
-- [ ] Define research-session abstraction
-- [ ] Define task-template abstraction
+- [x] Document production-shaped architecture in [SYSTEM_CONTEXT.md](file:///home/berrybytes/Office/agent/agent-lab/SYSTEM_CONTEXT.md)
+- [x] Document execution roadmap in [ROADMAP.md](file:///home/berrybytes/Office/agent/agent-lab/ROADMAP.md)
+- [x] Verify existing AX + Agent Substrate KinD cluster environment via [scripts/setup.sh](file:///home/berrybytes/Office/agent/agent-lab/scripts/setup.sh)
+- [x] Provide initial operational scripts and experiment 001 protocol
 
 ---
 
-## Milestone 1 — Long-Lived Research Agent
+## Milestone 1 — Production-Shaped Persistent Research Agent
 
-**Goal:** Create the first real persistent research agent.
+**Goal:** Implement the control-plane abstractions, domain contracts, lifecycle state machine, and AX Adapter to run, suspend, reclaim, resume, and audit a durable research agent.
 
-### Environment
-- [ ] Define reusable AX Workspace
-- [ ] Define research-agent Task template
-- [ ] Configure approved Gateway access
-- [ ] Connect research MCP tools
-- [ ] Provide Git repository access
+### Phase 1: Domain & API Contracts
+- [ ] Define OpenAPI 3.0 specification for research sessions, tasks, and checkpoints ([api/openapi.yaml](file:///home/berrybytes/Office/agent/agent-lab/api/openapi.yaml))
+- [ ] Implement core domain models ([domain/sessions/](file:///home/berrybytes/Office/agent/agent-lab/domain/sessions/), [domain/tasks/](file:///home/berrybytes/Office/agent/agent-lab/domain/tasks/), [domain/workspaces/](file:///home/berrybytes/Office/agent/agent-lab/domain/workspaces/))
+- [ ] Implement formal lifecycle state machine with validation and invariants ([domain/lifecycle/](file:///home/berrybytes/Office/agent/agent-lab/domain/lifecycle/))
+- [ ] Implement idempotency and audit trail mechanics
 
-### Research Agent
-- [ ] Create research-agent image/runtime
-- [ ] Give agent a persistent `/workspace`
-- [ ] Define research directory structure
-- [ ] Add persistent notes
-- [ ] Add research objective
+### Phase 2: Orchestration & AX Adapter
+- [ ] Build typed AX Adapter ([adapters/ax/](file:///home/berrybytes/Office/agent/agent-lab/adapters/ax/)) abstracting Task/Workspace lifecycle operations away from raw shell scripts
+- [ ] Build metadata store interface with SQLite/Postgres persistence ([adapters/storage/](file:///home/berrybytes/Office/agent/agent-lab/adapters/storage/))
+- [ ] Build Orchestrator service ([services/orchestrator/](file:///home/berrybytes/Office/agent/agent-lab/services/orchestrator/)) coordinating state transitions and worker reclamation
+- [ ] Implement platform CLI ([cli/](file:///home/berrybytes/Office/agent/agent-lab/cli/)) exposing `agent-lab research create|status|suspend|resume|logs`
 
-### Lifecycle
-- [ ] Dynamically create AX Task
-- [ ] Observe Task lifecycle
-- [ ] Detect waiting state
-- [ ] Suspend task
-- [ ] Verify worker reclamation
-- [ ] Resume task
-- [ ] Verify workspace persistence
-- [ ] Verify research continuity
-
-### Success Test
-The agent should be able to:
-```
-start → research → write notes → suspend
-      → worker reclaimed
-      → resume → read previous notes → continue
-```
+### Phase 3: Live Verification & Testing
+- [ ] Execute `exp001-research-agent` through the Orchestrator and CLI
+- [ ] Verify automatic / policy-driven detection of `WAITING_FOR_EXTERNAL_API`
+- [ ] Suspend task and verify physical gVisor worker reclamation in `worker-pool`
+- [ ] Resume task and verify state restoration from `/workspace/state.json`
+- [ ] Verify final research report generation at `/workspace/report.md`
+- [ ] Add automated unit and integration tests for state machine, adapter, and idempotency
 
 ---
 
-## Milestone 2 — Research Session Manager
+## Milestone 2 — Autonomous Event-Driven Control Loop
 
-**Goal:** Stop treating AX Tasks as the user-facing abstraction.
+**Goal:** Connect the runtime observer and callback receiver to Agent Lab's Event Bus so that suspensions and resumptions happen automatically without operator polling.
 
-Introduce `ResearchSession`. The manager should maintain:
-- `session_id`
-- `task_id`
-- `workspace`
-- `objective`
-- `status`
-- `checkpoints`
-- `artifacts`
-
-### Tasks
-- [ ] Implement session creation
-- [ ] Implement dynamic AX Task creation
-- [ ] Store session metadata
-- [ ] Add session status
-- [ ] Add suspend operation
-- [ ] Add resume operation
-- [ ] Add artifact tracking
-- [ ] Add checkpoint records
+- [ ] Implement Agent Lab webhook listener / Event Consumer
+- [ ] Ingest observer events (`TASK_WAITING`, `TASK_RESUMED`, `SNAPSHOT_SAVED`)
+- [ ] Apply automated suspension policies based on idle timeout and external job type
+- [ ] Calculate and record exact compute savings (`worker_seconds_saved`)
 
 ---
 
-## Milestone 3 — Explicit Checkpoints
+## Milestone 3 — Explicit Checkpoint Management
 
-**Goal:** Make checkpoints first-class application objects.
+**Goal:** Treat checkpoints as first-class, immutable platform artifacts.
 
-### Tasks
-- [ ] Create checkpoint record
-- [ ] Associate checkpoint with AX Task
-- [ ] Record workspace metadata
-- [ ] Record research phase
-- [ ] Record artifact state
-- [ ] Implement checkpoint listing
-- [ ] Implement resume-from-checkpoint semantics
+- [ ] Implement Checkpoint Manager
+- [ ] Snapshot `/workspace` metadata, file manifests, and RustFS memory snapshot references
+- [ ] Expose checkpoint inspection and listing via API and CLI
+- [ ] Validate deterministic restore from historical checkpoints
 
 ---
 
-## Milestone 4 — Speculative Branching
+## Milestone 4 — Speculative Task Branching
 
-**Goal:** Create multiple independent research executions from one checkpoint.
+**Goal:** Fork a checkpointed research session into competing execution branches.
 
 ```
 checkpoint-003
       │
-      ├── branch-A
-      ├── branch-B
-      └── branch-C
+      ├── branch-A (Hypothesis A)
+      ├── branch-B (Hypothesis B)
+      └── branch-C (Test-Driven Approach)
 ```
 
-### Tasks
-- [ ] Define Branch object
-- [ ] Define parent/child relationship
-- [ ] Create branch workspace/state
-- [ ] Create branch AX Tasks
-- [ ] Apply branch-specific objectives
-- [ ] Run branches concurrently
-- [ ] Collect artifacts
-- [ ] Collect execution metrics
+- [ ] Implement Branch Manager
+- [ ] Clone checkpoint state and materialize branch-specific workspaces
+- [ ] Launch parallel AX Tasks with differentiated objectives
+- [ ] Execute branches concurrently across the worker pool
+- [ ] Stream branch-specific telemetry and logs
 
 ---
 
-## Milestone 5 — Branch Comparison
+## Milestone 5 — Quantitative Branch Comparison & Promotion
 
-**Goal:** Determine which speculative execution produced the best result.
+**Goal:** Compare speculative branches against quantitative metrics and promote the winning state.
 
-### Metrics
-- Correctness
-- Tests passed
-- Artifact quality
-- Research completeness
-- Execution time
-- Token usage
-- External API usage
-- Human evaluation
-
-### Tasks
-- [ ] Define result schema
-- [ ] Collect branch metrics
-- [ ] Generate comparison report
-- [ ] Rank branches
-- [ ] Select winner
+- [ ] Collect branch metrics (correctness, test coverage, artifact depth, duration, token cost)
+- [ ] Generate comparative analysis matrix and markdown report
+- [ ] Implement branch promotion semantics (reintegrate winning branch into primary session)
+- [ ] Archive rejected branches for auditability and lineage tracking
 
 ---
 
-## Milestone 6 — Branch Promotion
+## Milestone 6 — Native AX Branching Integration
 
-**Goal:** Allow the winning branch to become the primary research state.
+**Goal:** Seamlessly adopt native stateful branching when available in AX.
 
-### Tasks
-- [ ] Define promotion semantics
-- [ ] Preserve branch history
-- [ ] Promote workspace state
-- [ ] Update primary session
-- [ ] Retain rejected branches for auditability
+- [ ] Benchmark native AX branching vs. Agent Lab application-level branching
+- [ ] Implement native AX branching driver in the AX Adapter
+- [ ] Maintain consistent `ResearchSession` and `Branch` user-facing contracts
 
 ---
 
-## Milestone 7 — Native AX Branching Integration
+## Current Focus
 
-**Goal:** Replace custom branching mechanics when AX provides native stateful task branching.
-
-### Tasks
-- [ ] Evaluate native branching API
-- [ ] Compare against Agent Lab implementation
-- [ ] Replace custom branching mechanism where appropriate
-- [ ] Preserve Agent Lab's ResearchSession/Branch abstraction
-- [ ] Benchmark native vs application-level branching
-
----
-
-## Current Priority
-
-> **Only Milestone 0 and Milestone 1 should be implemented initially.**
-
-Do not begin speculative branching until persistent suspend/resume has been demonstrated reliably.
-
-The first proof should be:
-```
-CREATE
-  │
-  ▼
-WORK
-  │
-  ▼
-STATE ACCUMULATES
-  │
-  ▼
-SUSPEND
-  │
-  ▼
-WORKER RECLAIMED
-  │
-  ▼
-RESUME
-  │
-  ▼
-STATE RESTORED
-  │
-  ▼
-CONTINUE
-```
-That is the foundation for everything else.
+We are executing **Milestone 1**:
+1. Domain models & API contract
+2. Formal lifecycle state machine with idempotency
+3. AX Adapter & metadata persistence
+4. Orchestrator & CLI integration
+5. End-to-end verification of `exp001-research-agent`

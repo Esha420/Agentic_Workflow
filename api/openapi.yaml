@@ -1,0 +1,442 @@
+openapi: 3.0.3
+info:
+  title: Agent Lab Control Plane API
+  version: 1.0.0
+  description: >
+    Production-shaped control-plane platform for durable, checkpointable AI research sessions
+    built on Google AX and Agent Substrate.
+paths:
+  /v1/research/sessions:
+    post:
+      summary: Create a new research session
+      operationId: createResearchSession
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+      responses:
+        '201':
+          description: Research session created and task queued/started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Conflict or duplicate idempotency key with conflicting payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      summary: List research sessions
+      operationId: listResearchSessions
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/SessionStatus'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: List of research sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ResearchSession'
+
+  /v1/research/sessions/{id}:
+    get:
+      summary: Get details of a research session
+      operationId: getResearchSession
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Research session details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchSession'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Terminate and clean up a research session
+      operationId: deleteResearchSession
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Session deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/research/sessions/{id}/suspend:
+    post:
+      summary: Suspend an active research session and reclaim worker resources
+      operationId: suspendResearchSession
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session suspended; worker capacity reclaimed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchSession'
+        '409':
+          description: Invalid state transition (e.g. session not running or already suspended)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/research/sessions/{id}/resume:
+    post:
+      summary: Resume a suspended research session onto an available worker
+      operationId: resumeResearchSession
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session resumed onto active worker
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchSession'
+        '409':
+          description: Invalid state transition (e.g. session not in suspended state)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/research/sessions/{id}/checkpoints:
+    get:
+      summary: List all checkpoints for a research session
+      operationId: listCheckpoints
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Checkpoints recorded for this session
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Checkpoint'
+    post:
+      summary: Explicitly capture a checkpoint for the active session
+      operationId: createCheckpoint
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Checkpoint recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Checkpoint'
+
+  /v1/research/sessions/{id}/branches:
+    get:
+      summary: List branches derived from this session
+      operationId: listBranches
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Branches for this session
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Branch'
+    post:
+      summary: Fork a branch from a session checkpoint
+      operationId: createBranch
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBranchRequest'
+      responses:
+        '201':
+          description: Branch created and speculative execution scheduled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Branch'
+
+  /v1/research/branches/{id}/promote:
+    post:
+      summary: Promote a winning branch back into the primary research session
+      operationId: promoteBranch
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Branch promoted to primary session HEAD
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchSession'
+
+components:
+  responses:
+    BadRequest:
+      description: Invalid request parameters or body
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Requested resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    SessionStatus:
+      type: string
+      enum:
+        - CREATED
+        - STARTING
+        - RUNNING
+        - WAITING
+        - SUSPENDING
+        - SUSPENDED
+        - RESUMING
+        - COMPLETED
+        - FAILED
+        - CANCELLED
+
+    CreateSessionRequest:
+      type: object
+      required:
+        - objective
+      properties:
+        session_id:
+          type: string
+          description: Optional user-specified ID (auto-generated if omitted)
+          example: "rs-actor-checkpointing"
+        objective:
+          type: string
+          example: "Synthesize literature and proofs on distributed actor migration"
+        target:
+          type: string
+          example: "Autonomous Actor Checkpointing & State Persistence"
+        role:
+          type: string
+          default: "research"
+        atespace:
+          type: string
+          default: "default"
+        git_repo:
+          type: string
+          example: "https://github.com/google/ax.git"
+
+    CreateBranchRequest:
+      type: object
+      required:
+        - source_checkpoint_id
+        - objective
+      properties:
+        branch_id:
+          type: string
+          example: "br-approach-speculative-cache"
+        source_checkpoint_id:
+          type: string
+          example: "chk-001"
+        objective:
+          type: string
+          example: "Investigate speculative pre-warming of checkpoint snapshots"
+
+    ResearchSession:
+      type: object
+      required:
+        - id
+        - status
+        - objective
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        status:
+          $ref: '#/components/schemas/SessionStatus'
+        objective:
+          type: string
+        workspace_id:
+          type: string
+        active_task_id:
+          type: string
+          nullable: true
+        active_worker_ip:
+          type: string
+          nullable: true
+        version:
+          type: integer
+          description: Optimistic concurrency lock version
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties: true
+
+    Checkpoint:
+      type: object
+      required:
+        - id
+        - session_id
+        - task_id
+        - created_at
+      properties:
+        id:
+          type: string
+        session_id:
+          type: string
+        task_id:
+          type: string
+        workspace_version:
+          type: string
+        execution_state_key:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties: true
+
+    Branch:
+      type: object
+      required:
+        - id
+        - parent_session_id
+        - source_checkpoint_id
+        - objective
+        - status
+      properties:
+        id:
+          type: string
+        parent_session_id:
+          type: string
+        source_checkpoint_id:
+          type: string
+        task_id:
+          type: string
+        objective:
+          type: string
+        status:
+          type: string
+        result:
+          type: object
+          nullable: true
+        metrics:
+          type: object
+          properties:
+            duration_seconds:
+              type: number
+            worker_seconds_saved:
+              type: number
+            tokens_used:
+              type: integer
+
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
