@@ -76,7 +76,7 @@ class TestOrchestrator(unittest.TestCase):
             )
             self.assertEqual(session.id, "test-rs-100")
             self.assertEqual(session.status, SessionStatus.RUNNING)
-            self.assertEqual(session.active_task_id, "task-test-rs-100")
+            self.assertEqual(session.active_task_id, "test-rs-100")
 
             # Verify idempotency on retry
             retry_session = service.create_session(

@@ -82,6 +82,14 @@ def cmd_status(service: ResearchSessionService, args):
     print(f"Concurrency Ver: {session.version}")
     print(f"Created At:      {session.created_at}")
     print(f"Updated At:      {session.updated_at}")
+    checkpoints = service.store.list_checkpoints(session.id)
+    if checkpoints:
+        print("")
+        print("--- Checkpoints ---")
+        for cp in checkpoints:
+            ts = cp.created_at[:19].replace("T", " ")
+            print(f"[{ts}] {cp.id} | Workspace: {cp.workspace_version} | Task: {cp.task_id}")
+
     print("")
     print("--- Recent Audit Trail ---")
     for event in session.audit_trail[-5:]:

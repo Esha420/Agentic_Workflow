@@ -73,28 +73,78 @@ class ClusterAXAdapter(AXAdapterInterface):
             raise AXAdapterError(f"Failed to execute AX command: {e}") from e
 
     def apply_task(self, task_name: str, session_id: str, target: str, atespace: str = "default") -> Task:
+        bootstrap_script = r"""set -e
+WORKSPACE="${WORKSPACE:-/workspace}"
+RESEARCH_DIR="$WORKSPACE/research"
+MARKER_FILE="$RESEARCH_DIR/checkpoint-marker.txt"
+SESSION_FILE="$RESEARCH_DIR/session.json"
+PROGRESS_FILE="$RESEARCH_DIR/progress.md"
+FINDINGS_FILE="$RESEARCH_DIR/findings.md"
+
+mkdir -p "$RESEARCH_DIR"
+
+if [ ! -f "$MARKER_FILE" ]; then
+  UNIQUE_MARKER="marker-$(date +%s)-$RANDOM"
+  echo "SESSION: $TASK_NAME" > "$MARKER_FILE"
+  echo "PHASE: pre-suspension" >> "$MARKER_FILE"
+  echo "CHECKPOINT_MARKER: $UNIQUE_MARKER" >> "$MARKER_FILE"
+  echo "CREATED_AT: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$MARKER_FILE"
+
+  cat <<EOF > "$SESSION_FILE"
+{
+  "session_id": "$TASK_NAME",
+  "phase": "pre-suspension",
+  "checkpoint_marker": "$UNIQUE_MARKER",
+  "target": "$TARGET"
+}
+EOF
+
+  cat <<EOF > "$FINDINGS_FILE"
+# Preliminary Research Findings: $TARGET
+- Theorem 1: Checkpointed state in durable storage eliminates idle compute leakage.
+- Theorem 2: Hardware-level gVisor snapshots retain process tree without user serialization.
+- Status: Dispatched proof verification to external async worker.
+EOF
+
+  echo "# Research Progress: $TASK_NAME" > "$PROGRESS_FILE"
+  echo "- Initialized session with marker: \`$UNIQUE_MARKER\`" >> "$PROGRESS_FILE"
+  echo "[Pre-Suspension] Created research checkpoint marker: $UNIQUE_MARKER"
+else
+  PREV_MARKER=$(grep "CHECKPOINT_MARKER:" "$MARKER_FILE" | awk '{print $2}')
+  echo "RESUMED: true" >> "$MARKER_FILE"
+  echo "PREVIOUS_MARKER: $PREV_MARKER" >> "$MARKER_FILE"
+  echo "RESUMED_AT: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$MARKER_FILE"
+
+  echo "" >> "$PROGRESS_FILE"
+  echo "## Resumption Verified" >> "$PROGRESS_FILE"
+  echo "- State restored from checkpoint marker: \`$PREV_MARKER\`" >> "$PROGRESS_FILE"
+  echo "- Resumed timestamp: \`$(date -u +'%Y-%m-%dT%H:%M:%SZ')\`" >> "$PROGRESS_FILE"
+  echo "[Resumption Continuity Verified] Successfully discovered previous marker: $PREV_MARKER"
+fi
+
+exec /bin/bash /agent/run_workload.sh
+"""
         manifest = f"""apiVersion: ax.io/v1alpha1
 kind: Task
 metadata:
   name: {task_name}
   atespace: {atespace}
-  labels:
-    agent-lab.io/session-id: "{session_id}"
-    agent-lab.io/role: "research"
 spec:
   image: "localhost:5001/openclaw-agent@sha256:3a00eb8df2f127b46e926dcea420ade1d46f8723b0ec7abb4b3610637569f7d9"
   command:
     - /bin/bash
-    - /agent/run_workload.sh
+    - -c
+    - |
+{self._indent(bootstrap_script, 6)}
   env:
     - name: ROLE
       value: "research"
     - name: TARGET
       value: "{target}"
     - name: SCAN_API_URL
-      value: "http://mock-scan-api.default.svc.cluster.local:8080"
+      value: "http://172.18.0.4:8080"
     - name: MCP_URL
-      value: "http://172.18.0.1:8085/mcp"
+      value: "http://172.18.0.2:8000/mcp"
     - name: TASK_NAME
       value: "{task_name}"
     - name: WORKSPACE
@@ -121,6 +171,11 @@ spec:
             metadata={"target": target},
         )
 
+    @staticmethod
+    def _indent(text: str, spaces: int) -> str:
+        prefix = " " * spaces
+        return "\n".join(prefix + line if line.strip() else "" for line in text.splitlines())
+
     def get_task(self, task_name: str, atespace: str = "default") -> Optional[Task]:
         code, stdout, stderr = self._run_ax(["get", "task", task_name, "-a", atespace])
         if code != 0:
@@ -128,27 +183,35 @@ spec:
                 return None
             raise AXAdapterError(f"Error getting task '{task_name}': {stderr.strip() or stdout.strip()}")
 
-        # Parse table line output: NAME ATESPACE PHASE ACTOR WORKER-IP AGE
-        lines = [line.strip() for line in stdout.strip().splitlines() if line.strip()]
-        for line in lines[1:]:  # skip header
-            parts = re.split(r"\s+", line)
-            if len(parts) >= 3 and parts[0] == task_name:
-                phase_str = parts[2]
-                actor_id = parts[3] if len(parts) > 3 and parts[3] != "-" else None
-                worker_ip = parts[4] if len(parts) > 4 and parts[4] != "-" else None
-                try:
-                    phase = TaskPhase(phase_str)
-                except ValueError:
-                    phase = TaskPhase.UNKNOWN
-                return Task(
-                    id=task_name,
-                    session_id="",
-                    atespace=atespace,
-                    phase=phase,
-                    actor_id=actor_id,
-                    worker_ip=worker_ip,
-                )
-        return None
+        # Parse YAML output: status.phase, status.actor
+        phase = TaskPhase.UNKNOWN
+        m_phase = re.search(r"phase:\s*([A-Za-z0-9_-]+)", stdout)
+        if m_phase:
+            try:
+                phase = TaskPhase(m_phase.group(1))
+            except ValueError:
+                phase = TaskPhase.UNKNOWN
+
+        m_actor = re.search(r"actor:\s*([^\s]+)", stdout)
+        actor_id = m_actor.group(1) if m_actor else None
+
+        # Cross-reference with list_tasks table for worker_ip
+        worker_ip = None
+        for t in self.list_tasks(atespace=atespace):
+            if t.id == task_name:
+                worker_ip = t.worker_ip
+                if phase == TaskPhase.UNKNOWN:
+                    phase = t.phase
+                break
+
+        return Task(
+            id=task_name,
+            session_id="",
+            atespace=atespace,
+            phase=phase,
+            actor_id=actor_id,
+            worker_ip=worker_ip,
+        )
 
     def list_tasks(self, atespace: str = "default") -> List[Task]:
         code, stdout, stderr = self._run_ax(["get", "tasks", "-a", atespace])

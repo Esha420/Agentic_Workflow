@@ -15,6 +15,10 @@ spec:
           port: 8085
         - host: "172.18.0.0/16"
           port: 8085
+        - host: "172.18.0.0/16"
+          port: 8080
+        - host: "172.18.0.0/16"
+          port: 8000
         - host: "mock-scan-api.default.svc.cluster.local"
           port: 8080
         - host: "opentelemetry-collector.otel-system.svc.cluster.local"

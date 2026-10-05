@@ -79,7 +79,7 @@ class ResearchSessionService:
         self.store.save_session(session)
 
         # Apply AX Task
-        task_name = f"task-{session_id}"
+        task_name = session_id
         try:
             task = self.ax.apply_task(
                 task_name=task_name,
@@ -146,11 +146,19 @@ class ResearchSessionService:
                 SessionStatus.SUSPENDED,
                 SessionStatus.SUSPENDING,
             ):
+                checkpoint = Checkpoint(
+                    session_id=session.id,
+                    task_id=session.active_task_id,
+                    workspace_version=f"v-{int(time.time())}",
+                    metadata={"reason": "Autonomous observer suspension; worker reclaimed"},
+                )
+                self.store.save_checkpoint(checkpoint)
                 LifecycleTransitionManager.transition(
                     session=session,
                     target_status=SessionStatus.SUSPENDED,
                     reason="AX reported Task suspended; worker compute reclaimed",
                     actor="ax_sync",
+                    details={"checkpoint_id": checkpoint.id},
                 )
                 self.store.save_session(session)
 
@@ -347,13 +355,75 @@ class ResearchSessionService:
         if not session or not session.active_task_id:
             return None
 
-        # Execute ssh cat inside task container
         file_path = f"/workspace/{relative_path}"
-        code, stdout, stderr = self.ax.exec_task(
-            session.active_task_id,
-            ["cat", file_path],
-            atespace=session.atespace,
-        )
-        if code == 0:
-            return stdout
+        try:
+            code, stdout, stderr = self.ax.exec_task(
+                session.active_task_id,
+                ["cat", file_path],
+                atespace=session.atespace,
+            )
+            if code == 0 and stdout:
+                return stdout
+        except Exception:
+            pass
+
+        return self._read_artifact_from_snapshot(session.active_task_id, relative_path)
+
+    def _read_artifact_from_snapshot(self, task_name: str, relative_path: str) -> Optional[str]:
+        """Directly extracts file from the RustFS S3 durable snapshot archive."""
+        import subprocess, io, tarfile, json
+        try:
+            # Get the exact snapshotUri from the actor status
+            actor_cmd = [
+                "kubectl", "exec", "-n", "ax-system", "deploy/ax-toolbox", "--",
+                "kubectl-ate", "get", "actor", task_name, "-a", "default", "-o", "json"
+            ]
+            actor_res = subprocess.run(actor_cmd, capture_output=True, text=True, timeout=10)
+            if actor_res.returncode == 0:
+                actor_data = json.loads(actor_res.stdout)
+                snapshot_uri = actor_data.get("status", {}).get("externalSnapshot", {}).get("snapshotUri", "")
+                if snapshot_uri.startswith("s3://ate-snapshots"):
+                    xl_path = snapshot_uri.replace("s3://ate-snapshots", "/data/ate-snapshots") + "/durable-dir.tar.zstd/xl.meta"
+                else:
+                    xl_path = ""
+            else:
+                xl_path = ""
+
+            if not xl_path:
+                # Fallback to search
+                cmd = [
+                    "kubectl", "exec", "-n", "ate-system", "deploy/rustfs", "--",
+                    "sh", "-c",
+                    "find /data/ate-snapshots/atespaces/default/actors/ -name 'xl.meta' | grep durable-dir | sort -r | head -n 1"
+                ]
+                res = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+                if res.returncode != 0 or not res.stdout.strip():
+                    return None
+                xl_path = res.stdout.strip()
+
+            cat_cmd = ["kubectl", "exec", "-n", "ate-system", "deploy/rustfs", "--", "cat", xl_path]
+            cat_res = subprocess.run(cat_cmd, capture_output=True, timeout=15)
+            if cat_res.returncode != 0:
+                return None
+
+            raw_meta = cat_res.stdout
+            magic = b"\x28\xb5\x2f\xfd"
+            idx = raw_meta.find(magic)
+            if idx == -1:
+                return None
+
+            zstd_proc = subprocess.run(["zstd", "-d"], input=raw_meta[idx:], capture_output=True, timeout=10)
+            if zstd_proc.returncode != 0:
+                return None
+
+            tar_stream = io.BytesIO(zstd_proc.stdout[24:])
+            with tarfile.open(fileobj=tar_stream) as tar:
+                target_name = f"workspace/{relative_path.lstrip('/')}"
+                for member in tar.getmembers():
+                    if member.name == target_name:
+                        f = tar.extractfile(member)
+                        if f:
+                            return f.read().decode("utf-8", errors="ignore")
+        except Exception as e:
+            logger.warning(f"Failed to read artifact from snapshot: {e}")
         return None

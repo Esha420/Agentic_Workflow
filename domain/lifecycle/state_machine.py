@@ -36,12 +36,14 @@ class LifecycleStateMachine:
         SessionStatus.RUNNING: {
             SessionStatus.WAITING,
             SessionStatus.SUSPENDING,
+            SessionStatus.SUSPENDED,  # Autonomous cluster-driven suspension
             SessionStatus.COMPLETED,
             SessionStatus.FAILED,
             SessionStatus.CANCELLED,
         },
         SessionStatus.WAITING: {
             SessionStatus.SUSPENDING,
+            SessionStatus.SUSPENDED,  # Autonomous cluster-driven suspension
             SessionStatus.RUNNING,  # Fast wake before suspension
             SessionStatus.FAILED,
             SessionStatus.CANCELLED,
@@ -52,6 +54,7 @@ class LifecycleStateMachine:
         },
         SessionStatus.SUSPENDED: {
             SessionStatus.RESUMING,
+            SessionStatus.RUNNING,  # Autonomous cluster-level resume
             SessionStatus.CANCELLED,
         },
         SessionStatus.RESUMING: {
