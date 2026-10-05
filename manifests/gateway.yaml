@@ -1,0 +1,25 @@
+apiVersion: ax.io/v1alpha1
+kind: Gateway
+metadata:
+  name: ${GATEWAY_NAME:-research-gateway}
+  atespace: ${ATESPACE:-default}
+spec:
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+  egress:
+    allowlist:
+      hosts:
+        - host: "172.18.0.1/32"
+          port: 8085
+        - host: "172.18.0.0/16"
+          port: 8085
+        - host: "mock-scan-api.default.svc.cluster.local"
+          port: 8080
+        - host: "opentelemetry-collector.otel-system.svc.cluster.local"
+          port: 4318
+        - host: "*.github.com"
+          port: 443
+        - host: "*"
+          port: 443

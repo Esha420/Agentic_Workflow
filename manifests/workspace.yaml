@@ -1,0 +1,19 @@
+apiVersion: ax.io/v1alpha1
+kind: Workspace
+metadata:
+  name: ${WORKSPACE_NAME:-research-workspace}
+  atespace: ${ATESPACE:-default}
+spec:
+  git:
+    - url: "${GIT_REPO_URL:-https://github.com/google/ax.git}"
+      branch: "${GIT_BRANCH:-main}"
+      mountPath: "/workspace/source/ax"
+  mcp:
+    servers:
+      - name: "research-tools"
+        url: "${MCP_URL:-http://172.18.0.1:8085/mcp}"
+        transport: "sse"
+  skills:
+    repositories:
+      - name: "research-skills"
+        url: "local://skills/research"

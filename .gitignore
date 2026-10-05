@@ -1,0 +1,17 @@
+# Local state and artifacts
+.agent/
+*.log
+*.tmp
+*.bak
+.DS_Store
+
+# Virtual environment & python caches
+__pycache__/
+*.pyc
+.venv/
+env/
+
+# Workspace persistent mount testing
+/workspace/
+state.json
+report.md
