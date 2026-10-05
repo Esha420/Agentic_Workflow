@@ -165,14 +165,21 @@ agent-lab/
 
 ---
 
-## 6. Current Status: Milestone 1 in Progress
+## 6. Current Status: Milestone 1 Completed (Verified)
 
 We adhere to the **Current Implementation Rule**: *Do not build the complete platform before proving the primitive.*
 
-We are currently focused on **Milestone 1 (Long-Lived Research Agent)**:
-1. Turn the existing OpenClaw task pattern into a reusable **Research Agent Task Template**.
-2. Dynamically instantiate an AX research task with persistent `/workspace`.
-3. Demonstrate the full lifecycle:
-   $$\text{Start} \longrightarrow \text{Research \& Notes} \longrightarrow \text{External Wait} \longrightarrow \text{Suspend} \longrightarrow \text{Worker Reclaimed} \longrightarrow \text{Resume} \longrightarrow \text{Continue Research}$$
+**Milestone 1 (Long-Lived Research Agent)** has been **completed and empirically validated** with full cluster evidence:
+1. Reusable Research Agent Task Template dynamically instantiated via `agent-lab research create`.
+2. Durable workspace state accumulated under `/workspace/research/` prior to suspension.
+3. Autonomous idle wait detection triggering automatic task suspension.
+4. Physical compute worker reclaimed (worker allocation dropped from 1 to 0).
+5. Cross-worker migration proven: restored onto a different physical worker pod and successfully completed research synthesis.
 
-For the comprehensive specification and design rules, see [SYSTEM_CONTEXT.md](file:///home/berrybytes/Office/agent/agent-lab/SYSTEM_CONTEXT.md) and [ROADMAP.md](file:///home/berrybytes/Office/agent/agent-lab/ROADMAP.md).
+```text
+Start ──► Research and Notes ──► External Wait ──► Suspend ──► Worker Reclaimed ──► Resume ──► Continue Research
+```
+
+Complete empirical execution evidence, timestamps, worker IDs, and snapshot details are documented in [`experiments/001-persistent-research/results.md`](experiments/001-persistent-research/results.md).
+
+For the comprehensive specification, architectural blueprints, and roadmap, see [SYSTEM_CONTEXT.md](SYSTEM_CONTEXT.md), [ARCHITECTURE.md](ARCHITECTURE.md), and [ROADMAP.md](ROADMAP.md).

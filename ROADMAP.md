@@ -5,9 +5,9 @@
 **Goal:** Establish clean repository foundation, system context, and environment verification.
 
 - [x] Create Agent Lab repository structure
-- [x] Document production-shaped architecture in [SYSTEM_CONTEXT.md](file:///home/berrybytes/Office/agent/agent-lab/SYSTEM_CONTEXT.md)
-- [x] Document execution roadmap in [ROADMAP.md](file:///home/berrybytes/Office/agent/agent-lab/ROADMAP.md)
-- [x] Verify existing AX + Agent Substrate KinD cluster environment via [scripts/setup.sh](file:///home/berrybytes/Office/agent/agent-lab/scripts/setup.sh)
+- [x] Document production-shaped architecture in [SYSTEM_CONTEXT.md](SYSTEM_CONTEXT.md)
+- [x] Document execution roadmap in [ROADMAP.md](ROADMAP.md)
+- [x] Verify existing AX + Agent Substrate KinD cluster environment via [scripts/setup.sh](scripts/setup.sh)
 - [x] Provide initial operational scripts and experiment 001 protocol
 
 ---
@@ -17,24 +17,25 @@
 **Goal:** Implement the control-plane abstractions, domain contracts, lifecycle state machine, and AX Adapter to run, suspend, reclaim, resume, and audit a durable research agent.
 
 ### Phase 1: Domain & API Contracts
-- [ ] Define OpenAPI 3.0 specification for research sessions, tasks, and checkpoints ([api/openapi.yaml](file:///home/berrybytes/Office/agent/agent-lab/api/openapi.yaml))
-- [ ] Implement core domain models ([domain/sessions/](file:///home/berrybytes/Office/agent/agent-lab/domain/sessions/), [domain/tasks/](file:///home/berrybytes/Office/agent/agent-lab/domain/tasks/), [domain/workspaces/](file:///home/berrybytes/Office/agent/agent-lab/domain/workspaces/))
-- [ ] Implement formal lifecycle state machine with validation and invariants ([domain/lifecycle/](file:///home/berrybytes/Office/agent/agent-lab/domain/lifecycle/))
-- [ ] Implement idempotency and audit trail mechanics
+- [x] Define OpenAPI 3.0 specification for research sessions, tasks, and checkpoints ([api/openapi.yaml](api/openapi.yaml))
+- [x] Implement core domain models ([domain/sessions/](domain/sessions/), [domain/tasks/](domain/tasks/), [domain/workspaces/](domain/workspaces/))
+- [x] Implement formal lifecycle state machine with validation and invariants ([domain/lifecycle/](domain/lifecycle/))
+- [x] Implement idempotency and audit trail mechanics
 
 ### Phase 2: Orchestration & AX Adapter
-- [ ] Build typed AX Adapter ([adapters/ax/](file:///home/berrybytes/Office/agent/agent-lab/adapters/ax/)) abstracting Task/Workspace lifecycle operations away from raw shell scripts
-- [ ] Build metadata store interface with SQLite/Postgres persistence ([adapters/storage/](file:///home/berrybytes/Office/agent/agent-lab/adapters/storage/))
-- [ ] Build Orchestrator service ([services/orchestrator/](file:///home/berrybytes/Office/agent/agent-lab/services/orchestrator/)) coordinating state transitions and worker reclamation
-- [ ] Implement platform CLI ([cli/](file:///home/berrybytes/Office/agent/agent-lab/cli/)) exposing `agent-lab research create|status|suspend|resume|logs`
+- [x] Build typed AX Adapter ([adapters/ax/](adapters/ax/)) abstracting Task/Workspace lifecycle operations away from raw shell scripts
+- [x] Build metadata store interface with SQLite/Postgres persistence ([adapters/storage/](adapters/storage/))
+- [x] Build Orchestrator service ([services/orchestrator/](services/orchestrator/)) coordinating state transitions and worker reclamation
+- [x] Implement platform CLI ([cli/](cli/)) exposing `agent-lab research create|status|suspend|resume|report`
 
 ### Phase 3: Live Verification & Testing
-- [ ] Execute `exp001-research-agent` through the Orchestrator and CLI
-- [ ] Verify automatic / policy-driven detection of `WAITING_FOR_EXTERNAL_API`
-- [ ] Suspend task and verify physical gVisor worker reclamation in `worker-pool`
-- [ ] Resume task and verify state restoration from `/workspace/state.json`
-- [ ] Verify final research report generation at `/workspace/report.md`
-- [ ] Add automated unit and integration tests for state machine, adapter, and idempotency
+- [x] Execute `exp001-research-agent` through the Orchestrator and CLI
+- [x] Verify automatic / policy-driven detection of `WAITING_FOR_EXTERNAL_API`
+- [x] Suspend task and verify physical gVisor worker reclamation in `worker-pool`
+- [x] Resume task and verify state restoration from `/workspace/state.json`
+- [x] Verify final research report generation at `/workspace/report.md`
+- [x] Add automated unit and integration tests for state machine, adapter, and idempotency
+- [x] Empirical evidence documented in [experiments/001-persistent-research/results.md](experiments/001-persistent-research/results.md)
 
 ---
 
