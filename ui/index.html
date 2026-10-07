@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Lab — Interactive Multi-Agent Control Plane</title>
+  <meta name="description" content="Persistent, stateful, multi-agent research control plane with dynamic scope authorization, checkpointing, and speculative execution.">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚗️</text></svg>">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+      <div class="brand" id="brand-home-btn">
+        <div class="brand-logo">AL</div>
+        <span class="brand-text">Agent Lab</span>
+        <span class="brand-badge">CONTROL PLANE</span>
+      </div>
+
+      <nav class="header-nav">
+        <a class="nav-link active" id="nav-dashboard-btn">Dashboard</a>
+        <a class="nav-link" id="nav-sessions-btn">Research Sessions</a>
+        <a class="nav-link" id="nav-agents-btn">Agent Registry</a>
+        <a class="nav-link" id="nav-simulator-btn">Policy Simulator</a>
+      </nav>
+
+      <div class="header-status">
+        <div class="api-indicator" id="api-status-badge">
+          <span id="api-status-dot">●</span> <span id="api-status-text">Connecting...</span>
+        </div>
+        <div class="operator-badge">
+          <div class="status-dot"></div>
+          <span>Esha</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-content">
+
+      <!-- ===================================================================
+           VIEW 1: DASHBOARD
+           =================================================================== -->
+      <section id="view-dashboard">
+        <!-- Metrics Row -->
+        <div class="metrics-grid">
+          <div class="metric-card" id="metric-sessions">
+            <span class="metric-title">Research Sessions</span>
+            <div class="metric-value-container">
+              <span class="metric-value" id="val-total-sessions">0</span>
+            </div>
+            <span class="metric-subtitle">Durable investigations</span>
+          </div>
+
+          <div class="metric-card" id="metric-running">
+            <span class="metric-title">Running Agents</span>
+            <div class="metric-value-container">
+              <span class="metric-value" style="color: var(--status-running);" id="val-running-agents">0</span>
+            </div>
+            <span class="metric-subtitle">Active compute workers</span>
+          </div>
+
+          <div class="metric-card" id="metric-suspended">
+            <span class="metric-title">Suspended Agents</span>
+            <div class="metric-value-container">
+              <span class="metric-value" style="color: var(--status-suspended);" id="val-suspended-agents">0</span>
+            </div>
+            <span class="metric-subtitle">Compute capacity reclaimed</span>
+          </div>
+
+          <div class="metric-card" id="metric-checkpoints">
+            <span class="metric-title">Recorded Checkpoints</span>
+            <div class="metric-value-container">
+              <span class="metric-value" style="color: var(--accent-cyan);" id="val-total-checkpoints">0</span>
+            </div>
+            <span class="metric-subtitle">Durable state snapshots</span>
+          </div>
+        </div>
+
+        <!-- Dashboard Content Grid -->
+        <div class="dashboard-grid">
+          <!-- Left Column: Active Research Sessions -->
+          <div class="section-card">
+            <div class="section-header">
+              <h2 class="section-title">
+                <span>Active Research Sessions</span>
+              </h2>
+              <div class="section-actions">
+                <button class="btn btn-primary btn-sm" id="btn-open-create-modal">
+                  <span>+ New Session</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="session-list" id="dashboard-session-list">
+              <div style="padding: 2rem; text-align: center; color: var(--text-dim);">
+                Loading active research sessions...
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Recent Activity Feed -->
+          <div class="section-card">
+            <div class="section-header">
+              <h2 class="section-title">
+                <span>Recent Activity</span>
+              </h2>
+            </div>
+            <div class="activity-feed" id="dashboard-activity-feed">
+              <div style="padding: 1.5rem; text-align: center; color: var(--text-dim);">
+                Waiting for platform events...
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================
+           VIEW 2: RESEARCH SESSION EXPERIENCE
+           =================================================================== -->
+      <section id="view-session-detail" style="display: none;">
+        <div class="session-detail-view">
+          <!-- Session Header Card -->
+          <div class="session-detail-header">
+            <div class="detail-top-bar">
+              <div class="detail-title-group">
+                <button class="btn btn-secondary btn-sm" id="btn-back-to-dashboard">← Back</button>
+                <h1 class="detail-title" id="detail-session-title">Security Architecture Investigation</h1>
+                <span class="badge badge-running" id="detail-status-badge">RUNNING</span>
+              </div>
+              <div class="detail-actions">
+                <button class="btn btn-secondary btn-sm" id="btn-detail-suspend">⏸ Suspend</button>
+                <button class="btn btn-secondary btn-sm" id="btn-detail-resume">▶ Resume</button>
+                <button class="btn btn-secondary btn-sm" id="btn-detail-checkpoint">💾 Checkpoint</button>
+                <button class="btn btn-primary btn-sm" id="btn-detail-branch">🌿 Branch</button>
+              </div>
+            </div>
+
+            <!-- Detail Meta Grid -->
+            <div class="detail-meta-grid">
+              <div class="detail-meta-cell">
+                <span class="detail-meta-label">Task ID</span>
+                <span class="detail-meta-val" id="meta-task-id">-</span>
+              </div>
+              <div class="detail-meta-cell">
+                <span class="detail-meta-label">Workspace</span>
+                <span class="detail-meta-val" id="meta-workspace-id">-</span>
+              </div>
+              <div class="detail-meta-cell">
+                <span class="detail-meta-label">Primary Agent</span>
+                <span class="detail-meta-val" id="meta-agent-persona">researcher-27</span>
+              </div>
+              <div class="detail-meta-cell">
+                <span class="detail-meta-label">Worker Pod / IP</span>
+                <span class="detail-meta-val" id="meta-worker-node">-</span>
+              </div>
+              <div class="detail-meta-cell">
+                <span class="detail-meta-label">Active Checkpoint</span>
+                <span class="detail-meta-val" id="meta-checkpoint-id">-</span>
+              </div>
+              <div class="detail-meta-cell">
+                <span class="detail-meta-label">Session Created</span>
+                <span class="detail-meta-val" id="meta-started-at">-</span>
+              </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <div class="tabs-nav">
+              <button class="tab-btn active" data-tab="tab-timeline">📅 Timeline</button>
+              <button class="tab-btn" data-tab="tab-workspace">📁 Workspace</button>
+              <button class="tab-btn" data-tab="tab-agents">🤖 Agents & Identity</button>
+              <button class="tab-btn" data-tab="tab-simulator">🧪 Policy Simulator</button>
+            </div>
+          </div>
+
+          <!-- Tab 1: Timeline -->
+          <div class="section-card tab-content" id="tab-timeline">
+            <div class="timeline-container" id="session-timeline-list">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- Tab 2: Workspace Explorer -->
+          <div class="section-card tab-content" id="tab-workspace" style="display: none;">
+            <div class="workspace-container">
+              <div class="file-tree" id="workspace-file-tree">
+                <!-- Rendered via JS -->
+              </div>
+              <div class="file-content-pane" id="workspace-file-content">
+                Select an artifact from the file tree to view its content.
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 3: Agents & Identity View -->
+          <div class="section-card tab-content" id="tab-agents" style="display: none;">
+            <div id="session-agents-container" style="padding: 1.5rem;">
+              <div style="text-align: center; color: var(--text-dim); padding: 2rem;">Loading agent identity data...</div>
+            </div>
+          </div>
+
+          <!-- Tab 4: Policy Simulator -->
+          <div class="section-card tab-content" id="tab-simulator" style="display: none;">
+            <div style="padding: 1.75rem; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+              <div>
+                <h3 style="font-family: var(--font-heading); font-size: 1.1rem; margin-bottom: 1rem;">Policy Evaluation Parameters</h3>
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                  <div class="form-group">
+                    <label class="form-label">Caller Role</label>
+                    <input type="text" class="form-input" id="sim-caller-role" value="research-agent">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Requested Capability</label>
+                    <select class="form-select" id="sim-capability">
+                      <option value="code_review">code_review</option>
+                      <option value="document_analysis">document_analysis</option>
+                      <option value="web_research">web_research</option>
+                      <option value="production_deploy">production_deploy (Unauthorized)</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Target Agent</label>
+                    <input type="text" class="form-input" id="sim-target-agent" value="reviewer-04">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Environment</label>
+                    <select class="form-select" id="sim-environment">
+                      <option value="staging">staging</option>
+                      <option value="production">production</option>
+                    </select>
+                  </div>
+                  <button class="btn btn-primary" id="btn-run-simulation" style="margin-top: 0.5rem;">Evaluate Policy</button>
+                </div>
+              </div>
+
+              <div>
+                <h3 style="font-family: var(--font-heading); font-size: 1.1rem; margin-bottom: 1rem;">Evaluation Result</h3>
+                <div id="sim-result-box" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.25rem; font-family: var(--font-mono); font-size: 0.85rem; min-height: 250px;">
+                  Click "Evaluate Policy" to test dynamic scope calculation.
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ===================================================================
+           VIEW 4: AGENT REGISTRY DIRECTORY
+           =================================================================== -->
+      <section id="view-agents" style="display: none;">
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">Logical Agent Registry</h1>
+            <p class="view-subtitle">Authoritative directory of logical agents, decoupled from physical compute workers.</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-primary" id="btn-open-register-agent-modal">+ Register Agent</button>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="card-header">
+            <h2 class="card-title">Registered Agents Directory</h2>
+            <div style="font-size: 0.85rem; color: var(--text-dim);" id="registry-count-label">Loading agents...</div>
+          </div>
+          <div style="padding: 1.5rem;" id="agent-registry-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Modal: New Research Session -->
+    <div class="modal-overlay" id="modal-create-session">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 class="modal-title">New Research Session</h3>
+          <button class="btn btn-secondary btn-sm" id="btn-close-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="inp-session-objective">Research Objective *</label>
+            <textarea class="form-textarea" id="inp-session-objective" rows="3" placeholder="e.g. Investigate zero-copy memory restoration in gVisor sandboxes"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="inp-session-id">Session ID (Optional)</label>
+            <input type="text" class="form-input" id="inp-session-id" placeholder="e.g. rs-memory-restore-01">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="inp-session-target">Target Domain / Substrate</label>
+            <input type="text" class="form-input" id="inp-session-target" value="Autonomous Actor Checkpointing & State Persistence">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btn-cancel-modal">Cancel</button>
+          <button class="btn btn-primary" id="btn-submit-create-session">Create Session</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Register Logical Agent -->
+    <div class="modal-overlay" id="modal-register-agent">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 class="modal-title">Register Logical Agent</h3>
+          <button class="btn btn-secondary btn-sm" id="btn-close-agent-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="inp-agent-id">Agent ID *</label>
+            <input type="text" class="form-input" id="inp-agent-id" placeholder="e.g. researcher-42">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="inp-agent-role">Role *</label>
+            <input type="text" class="form-input" id="inp-agent-role" value="research-agent">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="inp-agent-tenant">Tenant Organization</label>
+            <input type="text" class="form-input" id="inp-agent-tenant" value="acme">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="inp-agent-env">Environment</label>
+            <input type="text" class="form-input" id="inp-agent-env" value="staging">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="inp-agent-caps">Capabilities (Comma-separated)</label>
+            <input type="text" class="form-input" id="inp-agent-caps" value="web_research, document_analysis, repo_read">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btn-cancel-agent-modal">Cancel</button>
+          <button class="btn btn-primary" id="btn-submit-register-agent">Register Agent</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

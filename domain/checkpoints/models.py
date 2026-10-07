@@ -15,6 +15,11 @@ class Checkpoint:
     task_id: str = ""
     workspace_version: str = "v1"
     execution_state_key: Optional[str] = None
+    parent_checkpoint_id: Optional[str] = None
+    branch_id: Optional[str] = None
+    workspace_generation: int = 1
+    snapshot_reference: Optional[str] = None
+    authorization_context: Dict[str, Any] = field(default_factory=dict)
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     metadata: Dict[str, Any] = field(default_factory=dict)
 

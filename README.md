@@ -1,175 +1,233 @@
 # Agent Lab
 
-> **A persistent, checkpointable research environment where an agent can work for days, sleep when idle, resume with its workspace intact, and fork its execution state into competing speculative branches.**
+> **An interactive control plane for durable, stateful, multi-agent research sessions, with dynamically managed identity, capability, communication scope, checkpointing, and speculative execution.**
 
 ---
 
 ## 1. Overview
 
-**Agent Lab** is an experimental platform for building long-lived, stateful AI agents on top of [Google AX](https://github.com/google/ax) and **Agent Substrate**.
+**Agent Lab** is a persistent, multi-agent research and experimentation platform built on top of [Google AX](https://github.com/google/ax) (Orchestration Substrate) and **Agent Substrate** (Execution Substrate).
 
-Rather than treating AI agents as short-lived, stateless chatbot loops that discard their context between runs, Agent Lab models agents as **durable, inspectable, checkpointable computational processes**:
+> **The Composition Principle:**
+> 
+> **Agent Lab owns application-level semantics and trust decisions; AX owns task orchestration; Agent Substrate owns isolated agent execution and state restoration. Agent Lab does not replace AX or Substrate—it composes them into a higher-level durable, interactive, multi-agent research platform.**
 
-- **Accumulate State:** Retain code, research findings, documentation, tool outputs, and environment changes in a durable `/workspace`.
-- **Suspend & Reclaim:** Detect when an agent is waiting for external events or user input, checkpoint its state, and reclaim expensive gVisor worker compute.
+Rather than treating AI agents as short-lived, stateless chatbot loops that discard context between runs, Agent Lab models agents as **durable, inspectable, checkpointable, and securely communicating computational processes**:
+
+- **Accumulate State:** Retain code, research findings, documentation, tool outputs, and environment changes in a durable, versioned `/workspace`.
+- **Suspend & Reclaim:** Detect when an agent is waiting for external events or human input, checkpoint its execution state, and reclaim physical gVisor worker compute.
 - **Resume Seamlessly:** Restore the agent hours or days later on another worker with its workspace, research notes, and execution trajectory intact.
-- **Speculative Task Branching:** Fork a checkpointed research state into competing hypothesis branches (e.g., Approach A vs. Approach B vs. Test-Driven Approach), execute them independently, compare outcomes, and promote the winner.
+- **Client-Decoupled Control Plane:** The CLI is promoted to a client of the unified **Agent Lab API**, sharing the exact same backend control plane as the interactive **Web UI** and external integrations.
+- **Trust & Scope Plane:** Workload identity tokens, dynamic capabilities, and task-scoped policies govern agent-to-agent communication without requiring static peer-to-peer permissions.
+- **Speculative Task Branching:** Fork a checkpointed research state into competing hypothesis branches (e.g., Approach A vs. Approach B vs. Test-Driven Approach), execute them independently with branch-scoped identities, compare outcomes, and promote the winner.
 
 ---
 
-## 2. Conceptual Architecture
+## 2. Evolved Architecture
 
 ```
-                         ┌─────────────────────┐
-                         │    Agent Lab CLI    │
-                         │  create / run /     │
-                         │  suspend / resume   │
-                         │  branch / compare   │
-                         └──────────┬──────────┘
-                                    │
-                                    ▼
-                         ┌─────────────────────┐
-                         │   Research Manager  │
-                         │                     │
-                         │ task lifecycle      │
-                         │ checkpoints         │
-                         │ branches            │
-                         │ results             │
-                         └──────────┬──────────┘
-                                    │
-                       ┌────────────┴────────────┐
-                       │                         │
-                       ▼                         ▼
-                ┌─────────────┐          ┌─────────────┐
-                │     AX      │          │ Metadata DB │
-                │             │          │             │
-                │ Task        │          │ research    │
-                │ Workspace   │          │ sessions    │
-                │ Gateway     │          │ branches    │
-                └──────┬──────┘          └─────────────┘
-                       │
-                       ▼
-                ┌─────────────┐
-                │    Agent    │
-                │  Substrate  │
-                │             │
-                │ gVisor      │
-                │ workers     │
-                └──────┬──────┘
-                       │
-                       ▼
-              Persistent /workspace
-                       │
-              ┌────────┴────────┐
-              │                 │
-              ▼                 ▼
-        Git repositories      Research
-        notes/code/docs       artifacts
-```
-
----
-
-## 3. Project Progression
-
-Agent Lab is organized around three evolutionary phases:
-
-```
-Phase 1: Long-Lived Research Agent
-         │  (Persistent /workspace, external wait detection, suspend/resume, worker reclamation)
-         ▼
-Phase 2: Checkpoint-Aware Branching
-         │  (Application-level branching controller, checkpoint metadata, state cloning)
-         ▼
-Phase 3: Speculative Execution & Promotion
-            (Concurrent branch execution, quantitative comparison, automated promotion)
-```
-
-### Speculative Execution Flow
-
-```
-                         Research Task
+                         ┌──────────────────────────────┐
+                         │       Agent Lab UI           │
+                         │                              │
+                         │  Research Sessions           │
+                         │  Live Agent Activity         │
+                         │  Tasks / Workspaces          │
+                         │  Checkpoints / Timeline      │
+                         │  Branches / Comparisons      │
+                         │  Agent Communication Graph   │
+                         │  Policies / Policy Simulator │
+                         └──────────────┬───────────────┘
+                                        │
+                         ┌──────────────▼───────────────┐
+                         │       Agent Lab API          │
+                         │                              │
+                         │  Authentication              │
+                         │  Session API                 │
+                         │  Task API                    │
+                         │  Checkpoint API              │
+                         │  Branch API                  │
+                         │  Agent / Scope API           │
+                         └──────────────┬───────────────┘
+                                        │
+              ┌─────────────────────────▼─────────────────────────┐
+              │              AGENT LAB CONTROL PLANE              │
+              │                                                    │
+              │  ResearchSession Manager                           │
+              │  Lifecycle Manager                                 │
+              │  Checkpoint Manager                                │
+              │  Branch Manager                                    │
+              │  Agent Discovery / Capability Manager              │
+              │  Communication / Delegation Manager                │
+              └───────────────┬───────────────────┬────────────────┘
+                              │                   │
+                    ┌─────────▼────────┐  ┌──────▼───────────┐
+                    │  Trust & Scope   │  │ Metadata / Event │
+                    │  Plane           │  │ Infrastructure   │
+                    │                  │  │                  │
+                    │  Workload Identity│ │ PostgreSQL       │
+                    │  Agent Registry  │  │ Event Bus        │
+                    │  Capabilities    │  │ Audit Events     │
+                    │  Policy Engine   │  │                  │
+                    │  Delegation      │  │                  │
+                    └─────────┬────────┘  └──────────────────┘
                               │
-                          checkpoint
-                              │
-                    ┌─────────┴─────────┐
-                    │                   │
-                 Branch A            Branch B
-               (Hypothesis A)      (Hypothesis B)
-                    │                   │
-                 results             results
-                    │                   │
-                    └─────────┬─────────┘
-                              │
-                          comparison
-                              │
+                              │ scoped authorization
                               ▼
-                        winning branch
+                       ┌───────────────┐
+                       │      AX       │
+                       │               │
+                       │ Task          │
+                       │ Workspace     │
+                       │ Gateway       │
+                       │ Orchestration │
+                       └───────┬───────┘
+                               │
+                               ▼
+                       ┌───────────────┐
+                       │    Substrate  │
+                       │               │
+                       │ gVisor Actors │
+                       │ State         │
+                       │ Checkpoints   │
+                       └───────────────┘
 ```
 
 ---
 
-## 4. Architectural Boundaries
+## 3. Client Decoupling: Promoting the CLI to a Client
 
-Agent Lab builds *on top of* AX and Agent Substrate without duplicating their core responsibilities:
+The CLI is an interface to Agent Lab, not Agent Lab itself. All user interfaces and external integrations converge on the unified **Agent Lab API**:
+
+```
+                 ┌── CLI (`agent-lab`)
+                 │
+                 ├── Web UI (Interactive Dashboard)
+                 │
+                 ├── REST / OpenAPI Clients
+                 │
+                 └── External Integrations (Slack, Webhooks)
+                         │
+                         ▼
+                 Agent Lab API
+                         │
+                         ▼
+             Agent Lab Control Plane
+```
+
+Every command maps directly to API endpoints:
+- `agent-lab research create` $\longrightarrow$ `POST /api/v1/research-sessions`
+- `agent-lab research suspend` $\longrightarrow$ `POST /api/v1/research-sessions/{id}/suspend`
+- `agent-lab research resume` $\longrightarrow$ `POST /api/v1/research-sessions/{id}/resume`
+- Web UI and CLI execute identical domain workflows through `ResearchSessionService` and the `AX Adapter`.
+
+---
+
+## 4. Trust & Communication Layer
+
+Agent Lab introduces identity and dynamic scope as a **Trust & Communication layer** that operates above AX without disturbing the low-level lifecycle and checkpointing architecture:
+
+```
+AX Task Creation ──► Workload Identity ──► Agent Registry ──► Capability & Policy Evaluation ──► Scope Issuance
+```
+
+### The Four-Stage Authorization Model
+1. **Authentication (OIDC / Workload Identity):** *"Who is this agent?"*
+2. **Capability Registry (Agent Registry):** *"What can this type of agent potentially do?"*
+3. **Policy Evaluation (Policy Engine):** *"What may it do RIGHT NOW in this specific context?"*
+4. **Scope Issuance (Scope Issuer):** *"What is this agent authorized to perform?"*
+
+### Dynamic Scope Evaluation (Intersection Model)
+Agents do not hold static, long-lived peer-to-peer permissions. Effective authorization is dynamically evaluated from the intersection of context and policy constraints:
+
+$$\text{Effective Scope} = \text{Evaluate}(\text{Identity}, \text{Task Context}, \text{Workspace Context}, \text{Requested Capability}, \text{Delegated Authority}, \text{Policy Constraints})$$
+
+The platform includes a **Policy Simulator** and dynamic **Agent Communication Graph** to inspect, test, and audit inter-agent invocation boundaries.
+
+---
+
+## 5. Architectural Boundaries & Mental Model
+
+```text
+Agent Lab
+    │ application semantics
+    │ agent orchestration
+    │ trust / authorization
+    ↓
+AX
+    │ infrastructure orchestration
+    │ Task / Workspace / Gateway
+    ↓
+Agent Substrate
+    │ isolated execution
+    │ suspend / restore / migration
+    ↓
+Workers
+```
 
 | Layer | Responsibility |
 |---|---|
-| **AX** | Task, Workspace, and Gateway CRDs; Task lifecycle; `ax suspend` / `ax resume`; actor mapping |
-| **Agent Substrate** | Actor execution, worker scheduling, gVisor isolation, sandbox checkpointing & restoration, worker reclamation |
-| **Agent Lab** | `ResearchSession` abstraction, dynamic task templating, checkpoint bookkeeping, branch orchestration, result evaluation & promotion |
+| **Agent Lab (Application & Control Plane)** | `ResearchSession` abstraction, session lifecycle state machine, checkpoint lineage, branch orchestration & comparison, Trust & Scope plane (task-scoped OIDC-compatible workload identity, agent registry, dynamic capabilities, policy engine, delegation) |
+| **AX (Infrastructure Orchestration Layer)** | Task, Workspace, and Gateway CRDs; Task lifecycle reconciliation; `ax suspend` / `ax resume`; actor mapping |
+| **Agent Substrate (Isolated Execution Substrate)** | Actor execution, worker scheduling, gVisor KVM isolation, sandbox checkpointing & restoration, worker pool reclamation |
 
 ---
 
-## 5. Repository Structure
+## 6. Expanded ResearchSession Model
+
+A `ResearchSession` is the unit of **durable context** and **authorization context**:
 
 ```
-agent-lab/
-├── README.md                 # Project introduction and architecture overview
-├── SYSTEM_CONTEXT.md         # Source of truth: design rationale, principles, boundaries
-├── ROADMAP.md                # Multi-milestone execution plan (Milestones 0 to 7)
-├── ARCHITECTURE.md           # Deep dive on data structures, interfaces, and state layers
-├── DEVELOPMENT.md            # Local development, environment setup, and verification
+ResearchSession
+├── Identity
+│   ├── owner
+│   └── tenant
 │
-├── manifests/                # Reusable AX resource templates
-│   ├── workspace.yaml        # AX Workspace specification (Git, MCP, skills)
-│   ├── gateway.yaml          # AX Gateway egress allowlists
-│   └── task-template.yaml    # Parameterized Task template
+├── Task
 │
-├── agent/                    # Research agent workload & prompt templates
-│   ├── runner/               # Agent entrypoint and execution hooks
-│   ├── research/             # Literature synthesis, code investigation logic
-│   └── prompts/              # Research instructions and guidance
+├── Workspace
 │
-├── manager/                  # Research Session & Branching Controller
-│   ├── api/                  # High-level session orchestration API
-│   ├── lifecycle/            # Suspend/resume orchestration and observer integration
-│   ├── checkpoint/           # Checkpoint metadata store and restore logic
-│   ├── branching/            # Branch creation and parallel execution
-│   └── storage/              # Metadata persistence
+├── Agents
+│   ├── primary agent
+│   ├── delegated agents
+│   └── capabilities
 │
-├── cli/                      # Agent Lab CLI (`agent-lab create/suspend/resume/branch`)
+├── Authorization
+│   ├── scopes
+│   ├── policies
+│   └── delegation chain
 │
-├── experiments/              # Controlled experimental milestones
-│   ├── 001-persistent-research/   # Milestone 1: Workspace persistence & worker reclamation
-│   ├── 002-suspend-resume/        # Milestone 2: Timed external API waits & auto-suspend
-│   ├── 003-worker-reclamation/    # Milestone 3: Substrate worker pool inspection
-│   └── 004-speculative-branching/ # Milestone 4: Parallel branch comparison
+├── Checkpoints
 │
-└── scripts/                  # Workflow automation helpers
-    ├── setup.sh
-    ├── create-research-task.sh
-    ├── suspend.sh
-    ├── resume.sh
-    └── cleanup.sh
+├── Branches
+│
+├── Events
+│
+└── Results
 ```
 
 ---
 
-## 6. Current Status: Milestone 1 Completed (Verified)
+## 7. Multi-Milestone Roadmap
+
+The evolution builds incrementally on top of Milestone 1's proven durability primitive:
+
+| Milestone | Purpose | Research Question | Status |
+|---|---|---|---|
+| **1. Durable Agent** | Prove persistent state + suspend/resume + worker reclamation | *Can an agent survive?* | ✅ Verified |
+| **2. API + Web UI** | Make Agent Lab interactive and client-independent | *Can humans operate it?* | Next |
+| **3. OIDC Agent Identity** | Establish verifiable workload identity | *Can we identify it?* | Planned |
+| **4. Dynamic Scope** | Introduce capability/policy-based authorization | *Can we control what it is allowed to do?* | Planned |
+| **5. Multi-Agent Communication** | Actually exercise dynamic authorization | *Can multiple agents safely collaborate?* | Planned |
+| **6. Checkpoint Branching** | Fork durable state and authorization context | *Can we fork their state?* | Planned |
+| **7. Speculative Execution & Promotion** | Compete, evaluate, and promote branches | *Can we run competing autonomous branches and promote the result?* | Planned |
+
+---
+
+## 8. Current Status: Milestone 1 Completed (Verified)
 
 We adhere to the **Current Implementation Rule**: *Do not build the complete platform before proving the primitive.*
 
-**Milestone 1 (Long-Lived Research Agent)** has been **completed and empirically validated** with full cluster evidence:
+**Milestone 1 (Durable Agent)** has been **completed and empirically validated** with full cluster evidence:
 1. Reusable Research Agent Task Template dynamically instantiated via `agent-lab research create`.
 2. Durable workspace state accumulated under `/workspace/research/` prior to suspension.
 3. Autonomous idle wait detection triggering automatic task suspension.
@@ -180,6 +238,6 @@ We adhere to the **Current Implementation Rule**: *Do not build the complete pla
 Start ──► Research and Notes ──► External Wait ──► Suspend ──► Worker Reclaimed ──► Resume ──► Continue Research
 ```
 
-Complete empirical execution evidence, timestamps, worker IDs, and snapshot details are documented in [`experiments/001-persistent-research/results.md`](experiments/001-persistent-research/results.md).
+Complete execution evidence, timestamps, worker IDs, and snapshot details are documented in [`experiments/001-persistent-research/results.md`](experiments/001-persistent-research/results.md).
 
-For the comprehensive specification, architectural blueprints, and roadmap, see [SYSTEM_CONTEXT.md](SYSTEM_CONTEXT.md), [ARCHITECTURE.md](ARCHITECTURE.md), and [ROADMAP.md](ROADMAP.md).
+For deep architectural specifications, implementation plans, and execution milestones, see [ARCHITECTURE.md](ARCHITECTURE.md), [SYSTEM_CONTEXT.md](SYSTEM_CONTEXT.md), [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md), and [ROADMAP.md](ROADMAP.md).

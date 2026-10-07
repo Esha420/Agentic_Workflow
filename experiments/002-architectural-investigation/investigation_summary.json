@@ -1,0 +1,78 @@
+{
+  "experiment_1_ax_dynamic_orchestration": {
+    "dynamic_task_creation": true,
+    "dynamic_workspace_binding": true,
+    "native_agent_routing": false,
+    "native_capability_discovery": false,
+    "native_delegation": false,
+    "native_failover_rerouting": false,
+    "orchestration_layer_verdict": "AX is an Infrastructure/CRD Orchestrator. Agent Lab Control Plane is REQUIRED above AX."
+  },
+  "experiment_2_workload_identity": {
+    "mechanisms_compared": [
+      "Kubernetes Projected ServiceAccount",
+      "SPIFFE/SPIRE SVID",
+      "OIDC/JWT Workload Token"
+    ],
+    "canonical_choice": "Task-Scoped OIDC/JWT Workload Identity Token",
+    "rationale": "Directly carries task_id, workspace_id, role, and tenant claims required for dynamic evaluation without external SPIRE server overhead while remaining compatible with k8s Projected SA tokens.",
+    "distinct_identities_proven": true,
+    "cryptographic_verification_proven": true
+  },
+  "experiment_3_identity_persistence": {
+    "initial_worker": "worker-pool-6dbd6964f6-2s6cd",
+    "migrated_worker": "worker-pool-6dbd6964f6-8b9vz",
+    "logical_identity_preserved": true,
+    "token_signature_valid_after_migration": true,
+    "conclusion": "Logical workload identity is bound to the durable session/task and completely decoupled from ephemeral physical worker pods."
+  },
+  "experiment_4_dynamic_authorization": {
+    "intersection_model_proven": true,
+    "valid_evaluation_allowed": true,
+    "fail_closed_violations_verified": [
+      "unauthorized_capability",
+      "cross_task_boundary",
+      "environment_mismatch",
+      "excessive_delegation_depth"
+    ],
+    "conclusion": "Dynamic authorization computes effective scope dynamically from the intersection of context and constraints without static agent permissions."
+  },
+  "experiment_5_dynamic_discovery": {
+    "capability_based_discovery_proven": true,
+    "multiple_providers_supported": true,
+    "unavailable_agent_failover_proven": true,
+    "missing_capability_graceful_handling": true,
+    "conclusion": "Agents dynamically discover eligible peers by capability and policy filter rather than static hardcoded target IDs."
+  },
+  "experiment_6_delegation_and_gateway_enforcement": {
+    "delegation_containment_proven": true,
+    "escalation_prevented": true,
+    "security_boundary": "Agent Gateway intercepting all inter-agent traffic",
+    "gateway_fail_closed_verified": [
+      "expired_token",
+      "wrong_workspace",
+      "unauthorized_target",
+      "authority_escalation"
+    ],
+    "audit_records_emitted": 5
+  },
+  "experiment_7_api_boundary_and_auditability": {
+    "unified_api_contracts": [
+      "POST /api/v1/research-sessions",
+      "GET /api/v1/research-sessions/{id}",
+      "POST /api/v1/research-sessions/{id}/suspend",
+      "POST /api/v1/research-sessions/{id}/resume",
+      "POST /api/v1/research-sessions/{id}/checkpoints",
+      "POST /api/v1/agents/{id}/scope/evaluate",
+      "POST /api/v1/agents/{id}/delegate"
+    ],
+    "verified_clients": [
+      "CLI (`agent-lab`)",
+      "Web UI Dashboard",
+      "External Integration (Slack/CI)"
+    ],
+    "client_decoupling_proven": true,
+    "audit_schema_complete": true,
+    "provenance_reconstruction_verified": true
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "experiment_id": "EXP-008-EXTERNAL-OIDC-DYNAMIC-SCOPE",
+  "milestone": "Investigation: External OIDC & Dynamic Scope",
+  "timestamp": "2026-10-07T09:41:10Z",
+  "phases": {
+    "test_1_and_2_dynamic_creation_agent_a": {
+      "status": "PASSED",
+      "agent_id": "researcher-27",
+      "subject": "agent:research-27",
+      "issuer": "https://auth0.agent-lab.internal/",
+      "jti": "oidc-d8078e08b0b6"
+    },
+    "test_3_jwt_claims_verification": {
+      "status": "PASSED",
+      "claims": {
+        "sub": "agent:research-27",
+        "task_id": "task-482",
+        "workspace_id": "ws-security",
+        "scope": "document:read web:search",
+        "spiffe_workload_id": "spiffe://cluster.local/ns/default/sa/worker-actor-482-node-01"
+      }
+    },
+    "test_4_permitted_and_denied_actions": {
+      "status": "PASSED",
+      "document_read_allowed": true,
+      "web_search_allowed": true,
+      "deployment_execute_denied": true,
+      "denial_reason": "Gateway rejected: Action 'deployment:execute' not permitted by dynamic OIDC scope 'document:read web:search'"
+    },
+    "test_5_and_6_dynamic_creation_agent_b": {
+      "status": "PASSED",
+      "agent_b_subject": "agent:deploy-08",
+      "agent_b_scope": "deployment:execute deployment:read",
+      "deployment_allowed_for_b": true
+    },
+    "test_7_cross_agent_isolation": {
+      "status": "PASSED",
+      "theft_attempt_blocked": true,
+      "reason": "Gateway rejected: Identity invalid (Task binding mismatch: token bound to 'task-483', expected 'task-482')"
+    },
+    "test_8_revocation_enforcement": {
+      "status": "PASSED",
+      "revocation_successful": true,
+      "reason": "Gateway rejected: Identity invalid (Token has been revoked by IdP)"
+    },
+    "test_9_migration_identity_durability": {
+      "status": "PASSED",
+      "logical_subject_preserved": "agent:research-27",
+      "post_migration_invocation_allowed": true
+    },
+    "test_10_dual_identity_spiffe_coexistence": {
+      "status": "PASSED",
+      "oidc_logical_identity": "agent:research-27",
+      "spiffe_workload_identity": "spiffe://cluster.local/ns/default/sa/worker-actor-482-node-01"
+    }
+  },
+  "all_passed": true
+}

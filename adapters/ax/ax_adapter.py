@@ -20,7 +20,15 @@ class AXAdapterError(Exception):
 class AXAdapterInterface:
     """Abstract interface defining the control-plane contract with AX."""
 
-    def apply_task(self, task_name: str, session_id: str, target: str, atespace: str = "default") -> Task:
+    def apply_task(
+        self,
+        task_name: str,
+        session_id: str,
+        target: str,
+        atespace: str = "default",
+        identity_token: Optional[str] = None,
+        identity_subject: Optional[str] = None,
+    ) -> Task:
         raise NotImplementedError
 
     def get_task(self, task_name: str, atespace: str = "default") -> Optional[Task]:
@@ -72,16 +80,29 @@ class ClusterAXAdapter(AXAdapterInterface):
         except Exception as e:
             raise AXAdapterError(f"Failed to execute AX command: {e}") from e
 
-    def apply_task(self, task_name: str, session_id: str, target: str, atespace: str = "default") -> Task:
+    def apply_task(
+        self,
+        task_name: str,
+        session_id: str,
+        target: str,
+        atespace: str = "default",
+        identity_token: Optional[str] = None,
+        identity_subject: Optional[str] = None,
+    ) -> Task:
         bootstrap_script = r"""set -e
 WORKSPACE="${WORKSPACE:-/workspace}"
 RESEARCH_DIR="$WORKSPACE/research"
+IDENTITY_DIR="$WORKSPACE/.identity"
 MARKER_FILE="$RESEARCH_DIR/checkpoint-marker.txt"
 SESSION_FILE="$RESEARCH_DIR/session.json"
 PROGRESS_FILE="$RESEARCH_DIR/progress.md"
 FINDINGS_FILE="$RESEARCH_DIR/findings.md"
 
-mkdir -p "$RESEARCH_DIR"
+mkdir -p "$RESEARCH_DIR" "$IDENTITY_DIR"
+
+if [ -n "$AGENT_IDENTITY_TOKEN" ]; then
+  echo "$AGENT_IDENTITY_TOKEN" > "$IDENTITY_DIR/token.jwt"
+fi
 
 if [ ! -f "$MARKER_FILE" ]; then
   UNIQUE_MARKER="marker-$(date +%s)-$RANDOM"
@@ -151,6 +172,10 @@ spec:
       value: "/workspace"
     - name: SESSION_ID
       value: "{session_id}"
+    - name: AGENT_IDENTITY_TOKEN
+      value: "{identity_token or ''}"
+    - name: AGENT_SUBJECT
+      value: "{identity_subject or ''}"
     - name: OTEL_EXPORTER_OTLP_ENDPOINT
       value: "http://opentelemetry-collector.otel-system.svc.cluster.local:4318"
     - name: OTEL_SERVICE_NAME

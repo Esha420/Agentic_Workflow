@@ -1,0 +1,69 @@
+{
+  "experiment_id": "EXP-006-CHECKPOINT-BRANCHING",
+  "milestone": "Milestone 6 (Checkpoint Branching)",
+  "timestamp": "2026-10-07T08:42:30Z",
+  "phases": {
+    "phase_1_baseline_checkpoint": {
+      "status": "PASSED",
+      "session_id": "RS-EXP006-3423fb",
+      "checkpoint_id": "chk-root-c1",
+      "generation": 1
+    },
+    "phase_2_dual_branch_creation": {
+      "status": "PASSED",
+      "branch_a": "branch-A-sampling",
+      "branch_b": "branch-B-semantic",
+      "generation": 2
+    },
+    "phase_3_invariant_containment": {
+      "status": "PASSED"
+    },
+    "phase_4_capability_escalation_denied": {
+      "status": "PASSED",
+      "reason": "Capability escalation denied: requested branch capability 'prod_deploy' is not granted by source authorization (['document_analysis'])"
+    },
+    "phase_5_resource_escape_denied": {
+      "status": "PASSED",
+      "reason": "Resource escalation denied: requested path '/workspace/finance/payroll/*' escapes source boundary '/workspace/research/*'"
+    },
+    "phase_6_independent_identity": {
+      "status": "PASSED",
+      "subject_a": "agent:agent-branch-A-sampling",
+      "subject_b": "agent:agent-branch-B-semantic"
+    },
+    "phase_7_workspace_isolation": {
+      "status": "PASSED"
+    },
+    "phase_8_parent_immutability": {
+      "status": "PASSED"
+    },
+    "phase_9_commit_branch_checkpoints": {
+      "status": "PASSED",
+      "checkpoint_c2a": "chk-branch-a-c2",
+      "checkpoint_c2b": "chk-branch-b-c2"
+    },
+    "phase_10_lineage_and_audit": {
+      "status": "PASSED",
+      "total_checkpoints": 3,
+      "total_branches": 2,
+      "lineage_dag": {
+        "chk-root-c1": [
+          "branch-A-sampling",
+          "branch-B-semantic",
+          "chk-branch-a-c2",
+          "chk-branch-b-c2"
+        ],
+        "chk-branch-a-c2": [],
+        "chk-branch-b-c2": [],
+        "branch-A-sampling": [
+          "chk-branch-a-c2"
+        ],
+        "branch-B-semantic": [
+          "chk-branch-b-c2"
+        ]
+      },
+      "audit_event_count": 6
+    }
+  },
+  "all_passed": true
+}

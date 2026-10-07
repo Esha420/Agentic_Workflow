@@ -2,208 +2,368 @@
 
 ## 1. Project Purpose & Definition
 
-**Agent Lab** is a **control-plane platform for durable AI research sessions**, built on top of [Google AX](https://github.com/google/ax) and **Agent Substrate**.
+**Agent Lab** is an **interactive control plane for durable, stateful, multi-agent research sessions**, built on top of [Google AX](https://github.com/google/ax) and **Agent Substrate**.
 
-The system moves beyond short-lived, stateless chatbot loops and treats AI agents as **durable, inspectable, checkpointable computational processes**:
+The system moves beyond short-lived, stateless chatbot loops and treats AI agents as **durable, inspectable, checkpointable, and securely communicating computational processes**:
 
 - **Accumulate State:** Retain code, research findings, documentation, tool outputs, and environment changes in a durable, versioned `/workspace`.
-- **Suspend & Reclaim:** Detect when an agent is waiting for external events or human input, checkpoint its state, and reclaim expensive gVisor worker compute.
+- **Suspend & Reclaim:** Detect when an agent is waiting for external events or human input, checkpoint its execution state, and reclaim expensive physical gVisor worker compute.
 - **Resume Seamlessly:** Restore the agent hours or days later on another worker with its workspace, research notes, and execution trajectory intact.
-- **Speculative Task Branching:** Fork a checkpointed research state into competing hypothesis branches (e.g., Approach A vs. Approach B vs. Test-Driven Approach), execute them independently, compare outcomes, and promote the winner.
+- **Client Decoupling:** The CLI is promoted to a client of the unified **Agent Lab API**, sharing the exact same backend control plane as the interactive **Web UI** and external integrations.
+- **Trust & Scope Plane:** Identity (OIDC/workload tokens), dynamic capabilities, and task-scoped policies govern agent-to-agent communication without requiring static peer-to-peer permissions.
+- **Speculative Task Branching:** Fork a checkpointed research state into competing hypothesis branches (e.g., Approach A vs. Approach B vs. Test-Driven Approach), execute them independently with branch-scoped identities, compare outcomes, and promote the winner.
 
-### Core Architectural Principle
+### Foundational Architectural Principles
+
+> **The Composition Principle:**
+> 
+> **Agent Lab owns application-level semantics and trust decisions; AX owns task orchestration; Agent Substrate owns isolated agent execution and state restoration. Agent Lab does not replace AX or Substrate—it composes them into a higher-level durable, interactive, multi-agent research platform.**
+
 > **"Don't build a production-scale system; build a production-shaped system."**
 > 
 > We introduce the exact boundaries, contracts, observability, security, lifecycle management, configuration, and failure handling that a real platform requires, while keeping the implementation concise, transparent, and iterable.
 
 ---
 
-## 2. Core Research Question
+## 2. Core Research Story: The Seven Progressive Questions
 
-> **Can an AI agent be treated as a durable, inspectable, checkpointable computational process rather than as a sequence of independent model calls?**
+Agent Lab structures its engineering progression around seven foundational questions:
 
-Agent Lab investigates this through two fundamental capabilities:
-1. **Long-Lived Research Sessions:** Durable `/workspace`, external wait detection, hardware sandbox suspension, worker pool reclamation, and seamless resumption.
-2. **Speculative Task Branching:** Cloning checkpointed workspace and execution state to run competing hypotheses in parallel, quantitatively comparing artifacts and metrics, and promoting the best outcome.
+```text
+M1: Can an agent survive?
+       │  (Durable state + suspend/resume + worker reclamation)
+       ▼
+M2: Can humans operate it?
+       │  (Unified API + interactive Web UI + client-decoupled CLI)
+       ▼
+M3: Can we identify it?
+       │  (Verifiable workload identity + Agent Registry)
+       ▼
+M4: Can we control what it is allowed to do?
+       │  (Dynamic capability & policy-based authorization)
+       ▼
+M5: Can multiple agents safely collaborate?
+       │  (Inter-agent capability delegation + communication graph + policy simulation)
+       ▼
+M6: Can we fork their state?
+       │  (Durable checkpoint branching with isolated task & authorization context)
+       ▼
+M7: Can we run competing autonomous branches and promote the result?
+          (Speculative execution + quantitative comparison + winner promotion)
+```
 
 ---
 
 ## 3. Production Architecture Topology
 
 ```
-                         ┌──────────────────────┐
-                         │    Operator / UI     │
-                         │  CLI / API / Slack   │
-                         └──────────┬───────────┘
-                                    │
+                         ┌──────────────────────────────┐
+                         │       Agent Lab UI           │
+                         │                              │
+                         │  Research Sessions           │
+                         │  Live Agent Activity         │
+                         │  Tasks / Workspaces          │
+                         │  Checkpoints / Timeline      │
+                         │  Branches / Comparisons      │
+                         │  Agent Communication Graph   │
+                         │  Policies / Policy Simulator │
+                         └──────────────┬───────────────┘
+                                        │
+                         ┌──────────────▼───────────────┐
+                         │       Agent Lab API          │
+                         │                              │
+                         │  Authentication              │
+                         │  Session API                 │
+                         │  Task API                    │
+                         │  Checkpoint API              │
+                         │  Branch API                  │
+                         │  Agent / Scope API           │
+                         └──────────────┬───────────────┘
+                                        │
+              ┌─────────────────────────▼─────────────────────────┐
+              │              AGENT LAB CONTROL PLANE              │
+              │                                                    │
+              │  ResearchSession Manager                           │
+              │  Lifecycle Manager                                 │
+              │  Checkpoint Manager                                │
+              │  Branch Manager                                    │
+              │  Agent Discovery / Capability Manager              │
+              │  Communication / Delegation Manager                │
+              └───────────────┬───────────────────┬────────────────┘
+                              │                   │
+                    ┌─────────▼────────┐  ┌──────▼───────────┐
+                    │  Trust & Scope   │  │ Metadata / Event │
+                    │  Plane           │  │ Infrastructure   │
+                    │                  │  │                  │
+                    │  Workload Identity│ │ PostgreSQL       │
+                    │  Agent Registry  │  │ Event Bus        │
+                    │  Capabilities    │  │ Audit Events     │
+                    │  Policy Engine   │  │                  │
+                    │  Delegation      │  │                  │
+                    └─────────┬────────┘  └──────────────────┘
+                              │
+                              │ scoped authorization
+                              ▼
+                       ┌───────────────┐
+                       │      AX       │
+                       │               │
+                       │ Task          │
+                       │ Workspace     │
+                       │ Gateway       │
+                       │ Orchestration │
+                       └───────┬───────┘
+                               │
+                               ▼
+                       ┌───────────────┐
+                       │    Substrate  │
+                       │               │
+                       │ gVisor Actors │
+                       │ State         │
+                       │ Checkpoints   │
+                       └───────────────┘
+```
+
+---
+
+## 4. Separation of Concerns: Architectural Layers
+
+The system maintains a clean three-tier separation of concerns:
+
+```text
+Agent Lab
+    │ application semantics
+    │ agent orchestration
+    │ trust / authorization
+    ↓
+AX
+    │ infrastructure orchestration
+    │ Task / Workspace / Gateway
+    ↓
+Agent Substrate
+    │ isolated execution
+    │ suspend / restore / migration
+    ↓
+Workers
+```
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                   AGENT LAB (Application & Control Plane)              │
+│                                                                        │
+│ • ResearchSession abstraction & lifecycle state machine                │
+│ • Checkpoint lineage and speculative branching coordinator             │
+│ • Unified API serving CLI, Web UI, and external integrations           │
+│ • Trust & Scope Plane: Workload identities, capabilities, policy engine│
+│ • Inter-agent delegation, communication graph, policy simulator        │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ Scoped Task/Workspace requests
                                     ▼
-                         ┌──────────────────────┐
-                         │    Agent Lab API     │
-                         │                      │
-                         │  Auth / Validation   │
-                         │  Research Sessions   │
-                         │  Tasks / Branches    │
-                         └──────────┬───────────┘
-                                    │
+┌────────────────────────────────────────────────────────────────────────┐
+│               AX (Infrastructure Orchestration Layer)                  │
+│                                                                        │
+│ • Kubernetes CRDs: Task, Workspace, Gateway                            │
+│ • Gateway egress network allowlisting                                  │
+│ • Task lifecycle reconciler & actor scheduling mapping                 │
+│ • Low-level suspend and resume triggers (`ax suspend` / `ax resume`)   │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ Worker allocation & actor lifecycle
                                     ▼
-                         ┌──────────────────────┐
-                         │     Orchestrator     │
-                         │                      │
-                         │  Lifecycle Manager   │
-                         │  Checkpoint Manager  │
-                         │  Branch Manager      │
-                         └──────────┬───────────┘
-                                    │
-                    ┌───────────────┼───────────────┐
-                    ▼               ▼               ▼
-               AX Adapter      Metadata DB      Event Bus
-                    │         (PostgreSQL)
-                    ▼
-             ┌──────────────┐
-             │      AX      │
-             │ Task         │
-             │ Workspace    │
-             │ Gateway      │
-             └──────┬───────┘
-                    │
-                    ▼
-             Agent Substrate
-                    │
-             ┌──────┴──────┐
-             ▼             ▼
-          Worker 1       Worker 2
-          (gVisor)       (gVisor)
-             │             │
-             ▼             ▼
-          Agent A        Agent B
-
-┌────────────────────────────────────────────────────────────┐
-│                    Platform Concerns                       │
-│                                                            │
-│ Identity │ RBAC │ Secrets │ Audit │ Metrics │ Logs │ Trace │
-└────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│             AGENT SUBSTRATE (Isolated Execution Substrate)             │
+│                                                                        │
+│ • gVisor KVM-isolated worker sandboxes (`runsc`)                       │
+│ • Pre-warmed WorkerPool scheduling and reclamation                     │
+│ • Low-level sandbox memory checkpointing & restoration (RustFS S3)     │
+│ • Durable volume mounts across physical worker migrations              │
+└────────────────────────────────────────────────────────────────────────┘
 ```
+
+Agent Lab does not duplicate AX's task reconciliation or Substrate's worker pool management. It orchestrates high-level research intent and delegates execution to AX.
 
 ---
 
-## 4. Separation of Concerns: Control Plane vs. Execution Plane
+## 5. Client Decoupling: Promoting the CLI to a Client
 
-The fundamental boundary is between **what should happen** (Control Plane) and **how the workload runs** (Execution Plane).
-
-```
-                CONTROL PLANE (Agent Lab)
-        ┌─────────────────────────────────────────┐
-        │  ResearchSession │ Task │ Checkpoint    │
-        │  Branch │ Artifact │ Policy │ Audit     │
-        │                                         │
-        │  Session Manager  • Task Orchestrator   │
-        │  Checkpoint Manager • Branch Manager    │
-        │  Suspension Policy Engine               │
-        └────────────────────┬────────────────────┘
-                             │
-                             │ Typed API / Events
-                             ▼
-                EXECUTION PLANE (AX + Substrate)
-        ┌─────────────────────────────────────────┐
-        │  AX                                     │
-        │  • Task & Workspace CRDs                │
-        │  • Gateway Egress Filtering             │
-        │  • Task Lifecycle Reconciler            │
-        │                                         │
-        │  Agent Substrate                        │
-        │  • gVisor Hardware-Isolated Sandboxes   │
-        │  • Pre-warmed WorkerPool Scheduling     │
-        │  • RustFS S3 Memory Checkpoint Store    │
-        └─────────────────────────────────────────┘
-```
-
-### Control Plane (Agent Lab owns)
-- `ResearchSession` lifecycle and domain abstractions
-- Dynamic task templating and execution mapping
-- Checkpoint registry, lineage, and metadata
-- Speculative branch coordination and objective overrides
-- Branch artifact comparison and winner promotion
-- Application-level audit logging, idempotency, and policies
-
-### Execution Plane (AX + Agent Substrate owns)
-- Workload container execution and sandbox sandboxing
-- gVisor KVM-isolated worker placement and scheduling
-- Low-level sandbox memory checkpointing and restoration
-- Worker pool resource reclamation during task suspension
-- Workspace durable volume persistence across migrations
-- Gateway egress network allowlisting
-
----
-
-## 5. Domain Model & Entities
+The CLI is an interface to Agent Lab, not Agent Lab itself. All user interfaces and external integrations converge on the unified **Agent Lab API**:
 
 ```
-     ┌───────────────────────┐
-     │    ResearchSession    │
-     └───────────┬───────────┘
-                 │ 1
+                 ┌── CLI (`agent-lab`)
                  │
-                 │ *
-     ┌───────────▼───────────┐         ┌───────────────────────┐
-     │         Task          │◄────────┤       Workspace       │
-     └───────────┬───────────┘         │  (Repo, Notes, MCP)   │
-                 │ 1                   └───────────┬───────────┘
-                 │                                 │ versioned
-                 │ *                               │
-     ┌───────────▼───────────┐                     │
-     │      Checkpoint       │◄────────────────────┘
-     └───────────┬───────────┘
-                 │ 1
+                 ├── Web UI (Interactive Dashboard)
                  │
-                 │ *
-     ┌───────────▼───────────┐
-     │        Branch         │
-     └───────────────────────┘
+                 ├── REST / OpenAPI Clients
+                 │
+                 └── External Integrations (Slack, Webhooks)
+                         │
+                         ▼
+                 Agent Lab API
+                         │
+                         ▼
+             Agent Lab Control Plane
 ```
 
-### ResearchSession
-The root entity representing an investigation.
-- `id`: Unique session identifier (e.g., `rs-investigate-auth-7f9a`)
-- `status`: Current session status (`CREATED`, `STARTING`, `RUNNING`, `WAITING`, `SUSPENDED`, `COMPLETED`, `FAILED`, `CANCELLED`)
-- `objective`: High-level research goal
-- `workspace_id`: Reference to persistent workspace
-- `active_task_id`: Identifier of current active execution task
-- `created_at` / `updated_at`: Timestamps
-
-### Task
-An isolated unit of execution scheduled via the AX Adapter.
-- `id`: Task identifier in AX (e.g., `task-rs-investigate-auth-1`)
-- `session_id`: Parent research session
-- `phase`: Current AX execution phase (`Pending`, `Running`, `Suspended`, `Completed`, `Failed`)
-- `worker_node`: Worker node hosting the sandbox
-- `started_at` / `finished_at`: Execution window
-
-### Checkpoint
-An immutable snapshot of session state at a specific point in time.
-- `id`: Checkpoint ID (`chk-001`)
-- `session_id`: Parent session
-- `task_id`: Origin task
-- `workspace_version`: Snapshot identifier or hash of `/workspace`
-- `execution_state`: AX checkpoint reference (S3 snapshot key)
-- `created_at`: Timestamp
-- `metadata`: Phase indicator, open tools, external job IDs
-
-### Branch
-A speculative execution forking from a specific checkpoint.
-- `id`: Branch identifier (`br-approach-a`)
-- `parent_session_id`: Origin session
-- `source_checkpoint_id`: Root checkpoint
-- `task_id`: Dedicated AX task executing the branch
-- `objective`: Hypothesis or targeted variation
-- `status`: Execution status
-- `result`: Structured output or patch artifact
-- `metrics`: Quantitative evaluation (tokens, runtime, tests, cost)
+### Unified Request Flow
+Both CLI and Web UI execute identical domain pipelines:
+```
+UI / CLI
+  │
+  ▼
+POST /api/v1/research-sessions
+  │
+  ▼
+ResearchSessionService
+  │
+  ▼
+Trust & Scope Validation
+  │
+  ▼
+AX Adapter
+  │
+  ▼
+AX Task CRD
+```
 
 ---
 
-## 6. Formal Lifecycle State Machine
+## 6. Trust & Scope Plane (Trust & Communication Layer)
 
-Transitions between states are explicit, validated, and audited.
+The Trust & Scope Plane provides verifiable identity, capability registration, dynamic authorization, and delegated communication for multi-agent workflows.
+
+```
+AX Task Creation
+      │
+      ▼
+Workload Identity
+      │
+      ▼
+OIDC / OIDC-compatible identity token
+      │
+      ▼
+Agent Registry
+      │
+      ▼
+Capability / Policy Evaluation
+```
+
+> **Selected Identity Architecture:**
+> Task-scoped OIDC-compatible JWT workload identity is the selected identity architecture. OIDC/JWT workload identity remains the implementation direction for Milestone 3, with the concrete identity-provider integration (e.g. Kubernetes projected ServiceAccount tokens or dedicated token issuer) to be finalized during Milestone 3 implementation.
+
+### 6.1 Two Distinct Identity Dimensions
+
+```
+Human Operator                               AI Agent Workload
+      │                                             │
+      ▼                                             ▼
+OIDC Login                                    AX Task Creation
+      │                                             │
+      ▼                                             ▼
+Agent Lab UI / API                            Workload Identity
+      │                                             │
+      ▼                                             ▼
+User Identity & Roles                         OIDC Token (Agent Registry)
+      │                                             │
+      ▼                                             ▼
+Authorized Platform Operations                Capabilities & Task Scopes
+                                                    │
+                                                    ▼
+                                              Policy Engine Evaluation
+```
+
+1. **Human Identity:** Operators and researchers authenticate via OIDC to interact with the Agent Lab UI and API.
+2. **Agent Identity:** Dynamically scheduled agents receive verifiable workload identities via OIDC-compatible tokens linked to their task, tenant, and environment.
+
+### 6.2 The Four-Stage Authorization Model
+
+We maintain a strict conceptual distinction between authentication, capability definition, and contextual authorization:
+
+| Stage | Responsible Component | Question Answered |
+|---|---|---|
+| **Authentication** | OIDC Identity Provider | *"Who is this agent?"* |
+| **Capability Registry** | Agent Registry | *"What can this type of agent potentially do?"* |
+| **Policy Evaluation** | Policy Engine | *"What may it do RIGHT NOW in this specific context?"* |
+| **Scope Issuance** | Scope Issuer | *"What is this agent authorized to perform?"* |
+
+### 6.3 Dynamic Scope Evaluation (Intersection Model)
+
+Authorization is not a simple additive sum; it is evaluated at call time as the **intersection** of identity, task context, workspace boundaries, requested capability, delegated authority, and policy rules:
+
+$$\text{Effective Scope} = \text{Evaluate}(\text{Identity}, \text{Task Context}, \text{Workspace Context}, \text{Requested Capability}, \text{Delegated Authority}, \text{Policy Constraints})$$
+
+```
+                         Identity
+                            ∩
+                       Task Context
+                            ∩
+                    Workspace Boundary
+                            ∩
+                        Capability
+                            ∩
+                    Delegated Authority
+                            ∩
+                          Policy
+                            │
+                            ▼
+                     Effective Scope
+```
+
+### 6.4 Inter-Agent Communication & Delegation
+When Agent A invokes Agent B:
+1. Agent A requests capability invocation from the **Scope & Trust Plane**.
+2. The **Policy Engine** evaluates the intersection above.
+3. If approved, a short-lived scoped invocation token is issued for Agent B.
+4. An immutable **AuditEvent** is recorded in the metadata store.
+
+---
+
+## 7. Expanded ResearchSession Domain Model
+
+The `ResearchSession` entity is the **unit of durable context and authorization context**:
+
+```
+ResearchSession
+├── Identity
+│   ├── owner           # Human researcher / operator
+│   └── tenant          # Organization / tenant boundary
+│
+├── Task
+│   ├── id              # Active AX Task ID
+│   ├── phase           # Current execution phase
+│   └── worker_node     # Assigned gVisor worker pod
+│
+├── Workspace
+│   ├── id              # Persistent workspace reference
+│   └── root_path       # Durable volume mount (/workspace)
+│
+├── Agents
+│   ├── primary agent   # Lead research agent
+│   ├── delegated agents# Child/specialist agents (reviewer, coder)
+│   └── capabilities    # Registered capability set
+│
+├── Authorization
+│   ├── scopes          # Dynamic effective scopes
+│   ├── policies        # Tenant and session-level policies
+│   └── delegation chain# Depth and invocation restrictions
+│
+├── Checkpoints
+│   ├── lineage         # Directed acyclic graph of checkpoints
+│   └── active_chk      # Head checkpoint reference
+│
+├── Branches
+│   └── active_branches # Active speculative execution branches
+│
+├── Events
+│   └── timeline        # Event stream (waits, suspends, resumes)
+│
+└── Results
+    ├── report_path     # Final synthesis report (/workspace/report.md)
+    └── artifacts       # Generated findings, code patches, logs
+```
+
+---
+
+## 8. Formal Lifecycle State Machine
+
+Transitions between states are deterministic, validated against domain invariants, and recorded in audit logs.
 
 ```
                  ┌─────────────┐
@@ -241,76 +401,63 @@ Transitions between states are explicit, validated, and audited.
                  └─────────────┘
 ```
 
-### Valid Transition Table
+### Transition Table
 
-| Current State | Event | Target State | Action / Invariant |
+| Current State | Event | Target State | Invariant / Action |
 |---|---|---|---|
-| `CREATED` | `start` | `STARTING` | Validate config, bind workspace, create AX Task |
-| `STARTING` | `task_ready` | `RUNNING` | Worker allocated, sandbox started |
-| `RUNNING` | `wait_event` | `WAITING` | Agent dispatched async external request |
+| `CREATED` | `start` | `STARTING` | Validate config, bind workspace, issue AX Task CRD |
+| `STARTING` | `task_ready` | `RUNNING` | Worker allocated, sandbox active |
+| `RUNNING` | `wait_event` | `WAITING` | Agent dispatched asynchronous external request |
 | `WAITING` | `suspend` | `SUSPENDING` | Trigger `ax suspend task`, initiate memory snapshot |
 | `SUSPENDING` | `suspended` | `SUSPENDED` | Snapshot confirmed in RustFS; **worker released** |
 | `SUSPENDED` | `resume` | `RESUMING` | External callback or operator triggers `ax resume task` |
 | `RESUMING` | `resumed` | `RUNNING` | Sandbox restored on available worker; `/workspace` attached |
-| `RUNNING` | `complete` | `COMPLETED` | Research objective accomplished, `/workspace/report.md` written |
-| `*` | `fail` | `FAILED` | Process error, sandbox crash, or policy violation |
+| `RUNNING` | `complete` | `COMPLETED` | Objective met, `/workspace/report.md` finalized |
+| `*` | `fail` | `FAILED` | Process error, container crash, or policy violation |
 | `*` | `cancel` | `CANCELLED` | Explicit operator cancellation |
 
 ---
 
-## 7. First-Class Platform Concerns
+## 9. Platform Concerns
 
-### 7.1 Idempotency & Concurrency
-Network timeouts, duplicate webhooks, or retried operator commands must never cause duplicate tasks or invalid state transitions.
+### 9.1 Idempotency & Optimistic Concurrency
 - Every mutating request includes an `idempotency_key` and `request_id`.
-- Every transition validates against an optimistic lock version `version` on the entity.
-- If a duplicate operation is received, the existing entity state is returned immediately without re-executing.
+- Entity mutations check an optimistic version lock (`version`) to prevent race conditions.
 
-### 7.2 Observability & Telemetry
-Every operation emits structured metadata with distributed tracing:
-- **Trace Context:** `trace_id`, `span_id`, `session_id`, `task_id`, `branch_id`.
-- **Platform Metrics:**
-  - `agent_lab_sessions_total{status}`
-  - `agent_lab_tasks_active`
-  - `agent_lab_suspensions_total`
-  - `agent_lab_resumptions_total`
-  - `agent_lab_worker_seconds_saved` (Active vs. Suspended duration)
-  - `agent_lab_checkpoint_duration_seconds`
+### 9.2 Observability & Telemetry
+- Structured events emitted to PostgreSQL and the Event Bus with distributed tracing (`trace_id`, `span_id`, `session_id`, `task_id`).
+- Real-time compute tracking (`worker_seconds_saved` during suspension).
 
-### 7.3 Security & Sandbox Boundaries
-- **Workload Isolation:** Agents execute inside gVisor (`runsc`) sandboxes with KVM hardware virtualization.
-- **Network Filtering:** Outbound egress is strictly governed by the AX Gateway allowlist.
-- **Tenant Boundaries:** Research workspaces are bound strictly to their originating session; an agent in Session A cannot access Session B's filesystem or secrets.
-- **Secret Zero:** Credentials for external tools are injected at the Gateway/MCP layer, never baked into agent images or persisted in `/workspace`.
+### 9.3 Security & Sandbox Boundaries
+- **gVisor Isolation:** Agents execute inside `runsc` sandboxes with KVM virtualization.
+- **Gateway Allowlist:** Egress traffic is strictly controlled by AX Gateway rules.
+- **Dynamic Scope Enforcement:** Inter-agent calls are mediated by the Trust & Scope Policy Engine.
 
-### 7.4 Git-like Semantics for Workspace State
-State is treated as a versioned directed acyclic graph:
-- **Workspace:** The root repository of accumulated notes, findings, and code.
-- **Checkpoint:** Immutable snapshot equivalent to a `commit`.
-- **Branch:** Forked execution equivalent to a `branch`.
-- **Promotion:** Reintegration of winning branch artifacts equivalent to a `merge`.
+### 9.4 Git-like Semantics for Research State
+- **Workspace:** Durable working directory of code, notes, and data.
+- **Checkpoint:** Immutable snapshot (`commit`).
+- **Branch:** Speculative hypothesis branch (`branch`).
+- **Promotion:** Merging the winning hypothesis back into the primary lineage (`merge`).
 
 ---
 
-## 8. Failure Handling & Testing Strategy
+## 10. Multi-Milestone Platform Evolution
 
-A production-shaped platform explicitly accounts for infrastructure failure:
-1. **Unit Tests:** State machine transition validation, policy evaluation, schema parsing.
-2. **Integration Tests:** Adapter communication with AX control plane and PostgreSQL metadata store.
-3. **End-to-End Tests:** Full lifecycle verification: Create $\rightarrow$ Run $\rightarrow$ Wait $\rightarrow$ Suspend $\rightarrow$ Reclaim $\rightarrow$ Resume $\rightarrow$ Complete.
-4. **Failure Injection Tests:**
-   - Worker crash during active execution
-   - Network timeout during `suspend` or `resume`
-   - Duplicate callback webhooks
-   - AX Control Plane temporary unavailability
-   - Workspace mount failure or corrupted snapshot
+| Milestone | Purpose | Research Question | Status |
+|---|---|---|---|
+| **1. Durable Agent** | Prove persistent state + suspend/resume + worker reclamation | *Can an agent survive?* | ✅ Verified |
+| **2. API + Web UI** | Make Agent Lab interactive and client-independent | *Can humans operate it?* | Next |
+| **3. OIDC Agent Identity** | Establish verifiable workload identity | *Can we identify it?* | Planned |
+| **4. Dynamic Scope** | Introduce capability/policy-based authorization | *Can we control what it is allowed to do?* | Planned |
+| **5. Multi-Agent Communication** | Actually exercise dynamic authorization | *Can multiple agents safely collaborate?* | Planned |
+| **6. Checkpoint Branching** | Fork durable state and authorization context | *Can we fork their state?* | Planned |
+| **7. Speculative Execution & Promotion** | Compete, evaluate, and promote branches | *Can we run competing autonomous branches and promote the result?* | Planned |
 
 ---
 
-## 9. Non-Goals (Iterative Boundaries)
+## 11. Non-Goals (Iterative Boundaries)
 
-To keep the platform agile while production-shaped:
-- We will not build a custom container runtime (we leverage Substrate's gVisor).
-- We will not write a custom storage driver (we leverage Substrate's RustFS S3 snapshot store).
-- We will not replace AX's Task/Workspace CRD reconciler.
-- We will implement production-shaped interfaces, domain services, and CLI tools that interact with AX through clean adapters rather than ad-hoc shell scripts.
+- We do not replace AX's Task/Workspace CRD reconciler.
+- We do not build a custom container runtime (we leverage Substrate's gVisor).
+- We do not write a custom storage driver (we leverage Substrate's RustFS S3 snapshot store).
+- We do not enforce static peer-to-peer permissions; all communication is dynamic and task-scoped.

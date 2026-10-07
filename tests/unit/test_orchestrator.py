@@ -18,7 +18,16 @@ class MockAXAdapter(AXAdapterInterface):
     def __init__(self):
         self.tasks = {}
 
-    def apply_task(self, task_name: str, session_id: str, target: str, atespace: str = "default") -> Task:
+    def apply_task(
+        self,
+        task_name: str,
+        session_id: str,
+        target: str,
+        atespace: str = "default",
+        identity_token: Optional[str] = None,
+        identity_subject: Optional[str] = None,
+        **kwargs,
+    ) -> Task:
         task = Task(
             id=task_name,
             session_id=session_id,

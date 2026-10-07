@@ -1,0 +1,42 @@
+{
+  "phases": {
+    "phase_1_registry": {
+      "status": "PASSED",
+      "agent_id": "researcher-27",
+      "subject": "agent:researcher-27",
+      "lifecycle_state": "REGISTERED"
+    },
+    "phase_2_issuance": {
+      "status": "PASSED",
+      "jti": "tok-260cfe87d870",
+      "issuer": "https://identity.agent-lab.internal",
+      "audience": "agent-gateway",
+      "task_id": "T-482-autonomous-research",
+      "workspace_id": "WS-security-mesh",
+      "token_valid": true
+    },
+    "phase_3_migration_invariance": {
+      "status": "PASSED",
+      "worker_a": "10.244.0.26",
+      "worker_b": "10.244.0.38",
+      "subject_invariant": true,
+      "task_binding_invariant": true,
+      "workspace_binding_invariant": true,
+      "signature_valid": true
+    },
+    "phase_4_lifecycle_revocation": {
+      "status": "PASSED",
+      "final_lifecycle_state": "TERMINATED",
+      "token_rejected_after_revocation": true,
+      "revocation_reason": "Research objective completed"
+    },
+    "phase_5_tamper_resistance": {
+      "status": "PASSED",
+      "tampered_signature_rejected": true,
+      "task_spoofing_rejected": true,
+      "workspace_spoofing_rejected": true
+    }
+  },
+  "summary": {},
+  "verdict": "SUCCESS"
+}

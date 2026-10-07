@@ -1,0 +1,94 @@
+{
+  "experiment_id": "EXP-007-SPECULATIVE-EXECUTION",
+  "milestone": "Milestone 7 (Speculative Execution & Promotion)",
+  "timestamp": "2026-10-07T09:02:15Z",
+  "phases": {
+    "phase_1_baseline_establishment": {
+      "status": "PASSED",
+      "session_id": "RS-EXP007-98b15c",
+      "baseline_checkpoint": "chk-root-c1",
+      "initial_primary_head": "chk-root-c1"
+    },
+    "phase_2_concurrent_execution": {
+      "status": "PASSED",
+      "branches_executed": 3,
+      "execution_duration_sec": 0.121
+    },
+    "phase_3_state_and_identity_isolation": {
+      "status": "PASSED",
+      "agent_a": "agent-branch-A-raft",
+      "agent_b": "agent-branch-B-paxos",
+      "agent_c": "agent-branch-C-gossip-rogue",
+      "material_divergence_verified": true
+    },
+    "phase_4_multi_dimensional_matrix": {
+      "status": "PASSED",
+      "branch_a_score": 0.8845,
+      "branch_b_score": 0.9215,
+      "scoring_deterministic": true
+    },
+    "phase_5_policy_disqualification": {
+      "status": "PASSED",
+      "branch_c_disqualified": true,
+      "branch_c_score": 0.0,
+      "disqualification_reason": "Policy violation detected (compliance score: 0.00 < 1.00)"
+    },
+    "phase_6_winner_resolution": {
+      "status": "PASSED",
+      "ranking": [
+        "branch-B-paxos",
+        "branch-A-raft",
+        "branch-C-gossip-rogue"
+      ],
+      "winning_branch_id": "branch-B-paxos",
+      "winning_checkpoint_id": "chk-branch-B-paxos-c2"
+    },
+    "phase_7_automated_promotion": {
+      "status": "PASSED",
+      "promotion_id": "prm-09a9af02",
+      "previous_head": "chk-root-c1",
+      "new_primary_head": "chk-branch-B-paxos-c2",
+      "promoted_branch_id": "branch-B-paxos"
+    },
+    "phase_8_lineage_immutability": {
+      "status": "PASSED",
+      "root_checkpoint_id": "chk-root-c1",
+      "total_branches": 3,
+      "total_checkpoints": 4,
+      "losing_branch_inspectable": true,
+      "lineage_dag": {
+        "chk-root-c1": [
+          "branch-A-raft",
+          "branch-B-paxos",
+          "branch-C-gossip-rogue",
+          "chk-branch-A-raft-c2",
+          "chk-branch-C-gossip-rogue-c2",
+          "chk-branch-B-paxos-c2"
+        ],
+        "chk-branch-A-raft-c2": [],
+        "chk-branch-C-gossip-rogue-c2": [],
+        "chk-branch-B-paxos-c2": [],
+        "branch-A-raft": [
+          "chk-branch-A-raft-c2"
+        ],
+        "branch-B-paxos": [
+          "chk-branch-B-paxos-c2"
+        ],
+        "branch-C-gossip-rogue": [
+          "chk-branch-C-gossip-rogue-c2"
+        ]
+      }
+    },
+    "phase_9_failure_isolation": {
+      "status": "PASSED",
+      "failed_branch_id": "branch-D-crasher",
+      "primary_head_intact": true
+    },
+    "phase_10_promotion_idempotency": {
+      "status": "PASSED",
+      "promotion_id": "prm-09a9af02",
+      "idempotent": true
+    }
+  },
+  "all_passed": true
+}

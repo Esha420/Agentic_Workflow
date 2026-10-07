@@ -1,0 +1,63 @@
+{
+  "experiment_id": "EXP-004-TRUST-AND-SCOPE",
+  "timestamp": 1791359660.1378222,
+  "phases": {
+    "phase_1_capability_registry": {
+      "status": "PASSED",
+      "registered_capabilities_count": 6,
+      "verified_capabilities": [
+        "web_research",
+        "document_analysis",
+        "repo_read",
+        "code_review",
+        "code_generation",
+        "prod_deploy"
+      ]
+    },
+    "phase_2_contextual_intersection": {
+      "status": "PASSED",
+      "verdict": "ALLOWED",
+      "rule_id": "rule-research-collaboration",
+      "effective_scope": {
+        "subject": "agent:researcher-42",
+        "role": "research-agent",
+        "tenant": "acme-corp",
+        "environment": "staging",
+        "task_id": "T-900-research",
+        "workspace_id": "WS-acme-research",
+        "capability": "web_research",
+        "granted_action": "search",
+        "allowed_actions": [
+          "fetch",
+          "search",
+          "summarize"
+        ],
+        "resource_path": "/workspace/research/sources.json",
+        "max_invocations": 10,
+        "ttl_seconds": 900,
+        "delegation_depth": 0,
+        "target_agent": null,
+        "policy_rule": "rule-research-collaboration"
+      }
+    },
+    "phase_3_scope_tokens_and_quotas": {
+      "status": "PASSED",
+      "scope_id": "scp-ab716030ad",
+      "max_invocations": 3,
+      "consumed_calls": 3,
+      "quota_exhaustion_enforced": true
+    },
+    "phase_4_fail_closed_boundaries": {
+      "status": "PASSED",
+      "vectors_tested": 5,
+      "all_denied": true
+    },
+    "phase_5_gateway_and_audit": {
+      "status": "PASSED",
+      "gateway_audit_events_recorded": 1,
+      "last_event_id": "gtw-18d0deb4",
+      "last_status": "ALLOWED"
+    }
+  },
+  "overall_status": "PASSED"
+}

@@ -1,0 +1,54 @@
+{
+  "experiment_id": "EXP-005-MULTI-AGENT-DELEGATION",
+  "timestamp": 1791360555.9921494,
+  "phases": {
+    "phase_1_delegation": {
+      "status": "PASSED",
+      "child_scope_id": "dlg-958210dea4"
+    },
+    "phase_2_subset_proven": {
+      "status": "PASSED",
+      "subset_invariant": "VERIFIED"
+    },
+    "phase_3_capability_escalation": {
+      "status": "PASSED",
+      "denied_as_expected": true
+    },
+    "phase_4_resource_escalation": {
+      "status": "PASSED",
+      "denied_as_expected": true
+    },
+    "phase_5_cross_task": {
+      "status": "PASSED",
+      "denied_as_expected": true
+    },
+    "phase_6_cross_tenant": {
+      "status": "PASSED",
+      "denied_as_expected": true
+    },
+    "phase_7_depth_zero": {
+      "status": "PASSED",
+      "denied_as_expected": true
+    },
+    "phase_8_revocation": {
+      "status": "PASSED",
+      "revocation_cascade_enforced": true
+    },
+    "phase_9_audit_chain": {
+      "status": "PASSED",
+      "provenance_chain": [
+        "agent:planner-01",
+        "agent:researcher-27",
+        "agent:document-agent-42"
+      ],
+      "audit_records_count": 7
+    },
+    "phase_10_gateway_enforcement": {
+      "status": "PASSED",
+      "fail_closed_theft_blocked": true,
+      "fail_closed_escape_blocked": true,
+      "valid_invocation_authorized": true
+    }
+  },
+  "overall_status": "PASSED"
+}

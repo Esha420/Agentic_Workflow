@@ -1,2 +1,11 @@
 from .models import Checkpoint
-__all__ = ["Checkpoint"]
+from .branching import ExecutionBranch, BranchRequest, BranchStatus, BranchLineage, BranchLineageNode
+
+__all__ = [
+    "Checkpoint",
+    "ExecutionBranch",
+    "BranchRequest",
+    "BranchStatus",
+    "BranchLineage",
+    "BranchLineageNode",
+]
