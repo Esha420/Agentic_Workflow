@@ -1,33 +1,34 @@
-# fly.toml app configuration file generated for Agent Lab
+# fly.toml app configuration file generated for agentic-workflow-vgjnxq on 2026-10-14T08:21:57Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = "agentic-workflow-vgjnxq"
-primary_region = "ams"
+app = 'agentic-workflow-vgjnxq'
+primary_region = 'ams'
 
 [build]
 
 [env]
-  PORT = "8000"
-  HOST = "0.0.0.0"
+  HOST = '0.0.0.0'
+  PORT = '8000'
 
 [http_service]
   internal_port = 8000
   force_https = true
-  auto_stop_machines = "stop"
+  auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
-  processes = ["app"]
+  processes = ['app']
 
   [[http_service.checks]]
-    grace_period = "10s"
-    interval = "30s"
-    method = "GET"
-    timeout = "5s"
-    path = "/healthz"
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/healthz'
 
 [[vm]]
-  memory = "512mb"
-  cpu_kind = "shared"
+  memory = '512mb'
+  cpu_kind = 'shared'
   cpus = 1
+  memory_mb = 512
