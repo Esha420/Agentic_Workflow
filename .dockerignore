@@ -1,0 +1,28 @@
+# Git
+.git
+.gitignore
+
+# Python cache & artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Local database (Fly can initialize fresh or use a volume mount)
+agent_lab.db-journal
+
+# Documentation & tests to keep Docker image lean
+tests/
+experiments/
+.agents/
+.gemini/

@@ -3,6 +3,7 @@ adapters/storage/metadata_store.py — Persistent metadata store with idempotenc
 """
 from __future__ import annotations
 import json
+import os
 import sqlite3
 from typing import Any, Dict, List, Optional
 from domain.sessions.models import ResearchSession, SessionStatus, AuditEvent
@@ -126,8 +127,11 @@ class MetadataStoreInterface:
 class SQLiteMetadataStore(MetadataStoreInterface):
     """Production-shaped SQLite metadata store."""
 
-    def __init__(self, db_path: str = "agent_lab.db"):
-        self.db_path = db_path
+    def __init__(self, db_path: Optional[str] = None):
+        if db_path is None:
+            self.db_path = os.environ.get("AGENT_LAB_DB_PATH", "agent_lab.db")
+        else:
+            self.db_path = db_path
         self._init_db()
 
     def _get_connection(self) -> sqlite3.Connection:

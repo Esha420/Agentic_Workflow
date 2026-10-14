@@ -931,8 +931,8 @@ class AgentLabServer:
 def run_server():
     import argparse
     parser = argparse.ArgumentParser(description="Agent Lab Control Plane API Server")
-    parser.add_argument("--host", default="0.0.0.0", help="Binding host (default: 0.0.0.0)")
-    parser.add_argument("--port", type=int, default=8000, help="Binding port (default: 8000)")
+    parser.add_argument("--host", default=os.environ.get("HOST", "0.0.0.0"), help="Binding host (default: 0.0.0.0)")
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")), help="Binding port (default: 8000)")
     args = parser.parse_args()
 
     server = AgentLabServer(host=args.host, port=args.port)
